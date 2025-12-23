@@ -1889,12 +1889,6 @@ class MarkdownEditor(QMainWindow):
         self.setGeometry(100, 100, 1200, 750)
         self.setMinimumSize(900, 650)
         
-        # 设置窗口图标
-        import os
-        icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'Markdo.png')
-        if os.path.exists(icon_path):
-            self.setWindowIcon(QIcon(icon_path))
-        
         # 创建中心部件
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
