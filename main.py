@@ -14,22 +14,13 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWebEngineCore import QWebEngineSettings
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QPoint, QSettings, QUrl
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QPoint, QSettings, QUrl, QObject
 from PyQt6.QtGui import QFont, QColor, QAction, QKeySequence, QTextCursor, QShortcut, QSyntaxHighlighter, QTextCharFormat, QPalette, QIcon
 import re
 from datetime import datetime
 
 
 # ==================== 主题系统 ====================
-class CustomMenuBar(QMenuBar):
-    """自定义菜单栏 - 拦截 Alt 键的激活"""
-    def keyPressEvent(self, event):
-        from PyQt6.QtCore import Qt
-        # 拦截 Alt 键的激活，不埳父类处理
-        if event.key() == Qt.Key.Key_Alt:
-            return
-        super().keyPressEvent(event)
-
 class Theme:
     """主题配置"""
     DARK = {
@@ -284,8 +275,8 @@ class SettingsDialog(QDialog):
         self.hotkey_input.setPlaceholderText("按下想要设置的快捷键")
         self.hotkey_input.setReadOnly(True)
         self.hotkey_input.setMinimumWidth(150)
-        reset_btn = QPushButton("重置为Alt")
-        reset_btn.setMaximumWidth(100)
+        reset_btn = QPushButton("重置为Ctrl+Space")
+        reset_btn.setMaximumWidth(120)
         reset_btn.clicked.connect(self.reset_hotkey)
         hotkey_layout.addWidget(hotkey_label)
         hotkey_layout.addWidget(self.hotkey_input)
@@ -294,7 +285,7 @@ class SettingsDialog(QDialog):
         toolbar_layout.addLayout(hotkey_layout)
         
         # 提示信息
-        hint_label = QLabel("提示：默认快捷键 Alt（程序会隐藏 Windows 菜单），Ctrl+M 也可使用")
+        hint_label = QLabel("提示：默认快捷键 Ctrl+Space，Ctrl+M 也可使用")
         hint_label.setStyleSheet(f"color: {theme['text_secondary']}; font-size: 11px;")
         toolbar_layout.addWidget(hint_label)
         
@@ -331,13 +322,13 @@ class SettingsDialog(QDialog):
             self.theme_combo.setCurrentIndex(index)
         
         # 加载快捷键设置
-        hotkey = self.settings.value("toolbar/hotkey", "Alt", type=str)
+        hotkey = self.settings.value("toolbar/hotkey", "Ctrl+Space", type=str)
         self.hotkey_input.setText(hotkey)
     
     def reset_hotkey(self):
-        """重置Alt快捷键"""
-        self.hotkey_input.setText("Alt")
-        self.settings.setValue("toolbar/hotkey", "Alt")
+        """重置Ctrl+Space快捷键"""
+        self.hotkey_input.setText("Ctrl+Space")
+        self.settings.setValue("toolbar/hotkey", "Ctrl+Space")
     
     def save_settings(self):
         """保存设置"""
@@ -348,7 +339,7 @@ class SettingsDialog(QDialog):
         self.settings.setValue("theme", theme_name)
         
         # 保存快捷键设置
-        hotkey = self.hotkey_input.text() or "Alt"
+        hotkey = self.hotkey_input.text() or "Ctrl+Space"
         self.settings.setValue("toolbar/hotkey", hotkey)
         
         # 通知父窗口更新设置
@@ -1684,7 +1675,7 @@ class MarkdownEditor(QMainWindow):
         self.auto_show_toolbar = self.settings.value("toolbar/auto_show", False, type=bool)
         self.current_theme_name = self.settings.value("theme", "dark", type=str)
         self.current_theme = Theme.get_theme(self.current_theme_name)
-        self.toolbar_hotkey = self.settings.value("toolbar/hotkey", "Alt", type=str)
+        self.toolbar_hotkey = self.settings.value("toolbar/hotkey", "Ctrl+Space", type=str)
         
         self.init_ui()
         self.apply_theme(self.current_theme_name)
@@ -1701,13 +1692,6 @@ class MarkdownEditor(QMainWindow):
         icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'Markdo.png')
         if os.path.exists(icon_path):
             self.setWindowIcon(QIcon(icon_path))
-        
-        # 禁用菜单栏的 Alt 快捷键（不需要 Alt 来激活菜单）
-        custom_menubar = CustomMenuBar(self)
-        self.setMenuBar(custom_menubar)
-        custom_menubar.setStyleSheet("QMenuBar { menu-scrollable: 1; }")
-        # 设置菜单栏不接受 Tab 焦点，也不会响应 Alt 键
-        custom_menubar.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         
         # 创建中心部件
         central_widget = QWidget()
@@ -1810,7 +1794,7 @@ class MarkdownEditor(QMainWindow):
             self.toolbar_shortcut.deleteLater()
             
         # 根据设置添加新快捷键
-        hotkey = self.toolbar_hotkey or "Alt"
+        hotkey = self.toolbar_hotkey or "Ctrl+Space"
         self.toolbar_shortcut = QShortcut(QKeySequence(hotkey), self)
         self.toolbar_shortcut.activated.connect(lambda: self.show_floating_toolbar())
         
@@ -1823,60 +1807,60 @@ class MarkdownEditor(QMainWindow):
         """创建菜单栏"""
         menubar = self.menuBar()
         
-        # 文件菜单
-        file_menu = menubar.addMenu("文件(&F)")
+        # 文件菜单（移除 Alt 快捷键）
+        file_menu = menubar.addMenu("文件")
         
-        new_action = QAction("新建(&N)", self)
+        new_action = QAction("新建", self)
         new_action.setShortcut(QKeySequence.StandardKey.New)
         new_action.triggered.connect(lambda: self.create_new_tab())
         file_menu.addAction(new_action)
         
-        open_action = QAction("打开(&O)", self)
+        open_action = QAction("打开", self)
         open_action.setShortcut(QKeySequence.StandardKey.Open)
         open_action.triggered.connect(lambda: self.open_file())
         file_menu.addAction(open_action)
         
-        save_action = QAction("保存(&S)", self)
+        save_action = QAction("保存", self)
         save_action.setShortcut(QKeySequence.StandardKey.Save)
         save_action.triggered.connect(lambda: self.save_file())
         file_menu.addAction(save_action)
         
         file_menu.addSeparator()
         
-        settings_action = QAction("设置(&T)", self)
+        settings_action = QAction("设置", self)
         settings_action.triggered.connect(self.open_settings)
         file_menu.addAction(settings_action)
         
         file_menu.addSeparator()
         
-        quit_action = QAction("退出(&Q)", self)
+        quit_action = QAction("退出", self)
         quit_action.setShortcut(QKeySequence.StandardKey.Quit)
         quit_action.triggered.connect(self.close)
         file_menu.addAction(quit_action)
         
         # 编辑菜单
-        edit_menu = menubar.addMenu("编辑(&E)")
+        edit_menu = menubar.addMenu("编辑")
         
-        undo_action = QAction("撤销(&U)", self)
+        undo_action = QAction("撤销", self)
         undo_action.setShortcut(QKeySequence.StandardKey.Undo)
         undo_action.triggered.connect(self.undo)
         edit_menu.addAction(undo_action)
         
-        redo_action = QAction("重做(&R)", self)
+        redo_action = QAction("重做", self)
         redo_action.setShortcut(QKeySequence.StandardKey.Redo)
         redo_action.triggered.connect(self.redo)
         edit_menu.addAction(redo_action)
         
         # 帮助菜单
-        help_menu = menubar.addMenu("帮助(&H)")
+        help_menu = menubar.addMenu("帮助")
         
-        shortcuts_action = QAction("快捷键(&K)", self)
+        shortcuts_action = QAction("快捷键", self)
         shortcuts_action.triggered.connect(self.show_shortcuts)
         help_menu.addAction(shortcuts_action)
         
         help_menu.addSeparator()
         
-        about_action = QAction("关于(&A)", self)
+        about_action = QAction("关于", self)
         about_action.triggered.connect(self.show_about)
         help_menu.addAction(about_action)
         
@@ -2562,7 +2546,7 @@ window.MathJax = {{
         edit_shortcuts = [
             ("Ctrl+Z", "撤销"),
             ("Ctrl+Y", "重做"),
-            ("Alt+M", "显示/隐藏Markdown工具栏"),
+            ("Ctrl+Space", "显示/隐藏Markdown工具栏"),
             ("Ctrl+M", "显示/隐藏Markdown工具栏"),
         ]
         content_layout.addWidget(create_shortcut_group("编辑操作", edit_shortcuts))
@@ -2673,7 +2657,6 @@ window.MathJax = {{
             focused_widget = QApplication.focusWidget()
             if focused_widget is None or not self.floating_toolbar.isAncestorOf(focused_widget):
                 self.floating_toolbar.hide()
-    
 
 
 def main():
