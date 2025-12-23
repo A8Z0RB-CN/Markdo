@@ -268,8 +268,24 @@ class SettingsDialog(QDialog):
         self.auto_show_checkbox.setToolTip("开启后，当光标进入编辑区时自动显示工具栏\n离开编辑区时自动隐藏")
         toolbar_layout.addWidget(self.auto_show_checkbox)
         
+        # 快捷键自定义
+        hotkey_layout = QHBoxLayout()
+        hotkey_label = QLabel("显示/隐藏快捷键：")
+        self.hotkey_input = QLineEdit()
+        self.hotkey_input.setPlaceholderText("按下想要设置的快捷键")
+        self.hotkey_input.setReadOnly(True)
+        self.hotkey_input.setMinimumWidth(150)
+        reset_btn = QPushButton("重置为Alt")
+        reset_btn.setMaximumWidth(100)
+        reset_btn.clicked.connect(self.reset_hotkey)
+        hotkey_layout.addWidget(hotkey_label)
+        hotkey_layout.addWidget(self.hotkey_input)
+        hotkey_layout.addWidget(reset_btn)
+        hotkey_layout.addStretch()
+        toolbar_layout.addLayout(hotkey_layout)
+        
         # 提示信息
-        hint_label = QLabel("提示：关闭后可使用 Tab 或 Ctrl+M 手动打开")
+        hint_label = QLabel("提示：默认快捷键为 Alt，可点击输入框自定义")
         hint_label.setStyleSheet(f"color: {theme['text_secondary']}; font-size: 11px;")
         toolbar_layout.addWidget(hint_label)
         
@@ -304,6 +320,15 @@ class SettingsDialog(QDialog):
         index = self.theme_combo.findData(theme_name)
         if index >= 0:
             self.theme_combo.setCurrentIndex(index)
+        
+        # 加载快捷键设置
+        hotkey = self.settings.value("toolbar/hotkey", "Alt", type=str)
+        self.hotkey_input.setText(hotkey)
+    
+    def reset_hotkey(self):
+        """重置Alt快捷键"""
+        self.hotkey_input.setText("Alt")
+        self.settings.setValue("toolbar/hotkey", "Alt")
     
     def save_settings(self):
         """保存设置"""
@@ -313,10 +338,15 @@ class SettingsDialog(QDialog):
         theme_name = self.theme_combo.currentData()
         self.settings.setValue("theme", theme_name)
         
+        # 保存快捷键设置
+        hotkey = self.hotkey_input.text() or "Alt"
+        self.settings.setValue("toolbar/hotkey", hotkey)
+        
         # 通知父窗口更新设置
         if self.parent_editor:
             self.parent_editor.update_toolbar_settings(auto_show)
             self.parent_editor.apply_theme(theme_name)
+            self.parent_editor.reload_toolbar_shortcut(hotkey)
         
         self.accept()
 
@@ -456,18 +486,57 @@ class MarkdownTextEdit(QTextEdit):
     
     def keyPressEvent(self, event):
         """处理键盘事件"""
-        # Tab键触发悬浮窗，不插入缩进
+        # Tab键可以自动补全Markdown语法
         if event.key() == Qt.Key.Key_Tab:
+            if self.handle_tab_completion():
+                return  # 已处理自动补全
+            # 否则触发悬浮窗信号
             self.tab_pressed.emit()
             return  # 不继续默认行为（不插入缩进）
-        
+            
         # 回车键处理列表自动接续
         if event.key() == Qt.Key.Key_Return or event.key() == Qt.Key.Key_Enter:
             if self.handle_list_continuation():
                 return  # 已处理，不继续默认行为
-        
+            
         # 调用父类默认处理
         super().keyPressEvent(event)
+        
+    def handle_tab_completion(self):
+        """处理Tab自动补全，返回 True 表示已处理"""
+        cursor = self.textCursor()
+        cursor.movePosition(QTextCursor.MoveOperation.StartOfLine, QTextCursor.MoveMode.KeepAnchor)
+        line_text = cursor.selectedText()
+        cursor = self.textCursor()  # 恢复原始光标
+            
+        # Markdown自动补全双序列
+        completions = {
+            '**': '**',  # 粗体
+            '__': '__',
+            '*': '*',   # 斜体
+            '_': '_',
+            '~~': '~~', # 删除线
+            '==': '==', # 高亮
+            '`': '`',   # 行内代码
+            '[': '](',  # 链接
+            '(': ')',   # 括号
+            '{': '}',   # 花括号
+        }
+            
+        # 检查最后一个字符是否是需要补全的
+        if line_text and line_text[-1] in completions:
+            last_char = line_text[-1]
+            # 不处理已经配对的情况
+            if len(line_text) >= 2 and line_text[-2] + line_text[-1] in completions:
+                return False
+                
+            cursor.insertText(completions[last_char])
+            # 移动光标到中间
+            cursor.movePosition(QTextCursor.MoveOperation.Left, QTextCursor.MoveMode.MoveAnchor, len(completions[last_char]))
+            self.setTextCursor(cursor)
+            return True
+            
+        return False  # 未处理
     
     def handle_list_continuation(self):
         """处理列表自动接续，返回True表示已处理"""
@@ -1608,15 +1677,18 @@ class MarkdownEditor(QMainWindow):
         self.tabs = {}  # 存储所有标签页
         self.current_tab_id = 0
         self.floating_toolbar = None  # 悬浮工具栏
+        self.toolbar_shortcut = None  # 悬浮工具栏快捷键
         
         # 加载设置
         self.settings = QSettings("Markdo", "Settings")
         self.auto_show_toolbar = self.settings.value("toolbar/auto_show", False, type=bool)
         self.current_theme_name = self.settings.value("theme", "dark", type=str)
         self.current_theme = Theme.get_theme(self.current_theme_name)
+        self.toolbar_hotkey = self.settings.value("toolbar/hotkey", "Alt", type=str)
         
         self.init_ui()
         self.apply_theme(self.current_theme_name)
+        self.setup_toolbar_shortcut()  # 设置悬浮工具栏快捷键
         
     def init_ui(self):
         """初始化UI"""
@@ -1720,9 +1792,25 @@ class MarkdownEditor(QMainWindow):
             shortcut = QShortcut(QKeySequence(f"Ctrl+{i}"), self)
             shortcut.activated.connect(lambda level=i: self.insert_markdown("#" * level + " "))
         
-        # Ctrl+M - 显示/隐藏Markdown工具栏
+        # Ctrl+M - 显示/隐藏 Markdown工具栏
         toolbar_shortcut = QShortcut(QKeySequence("Ctrl+M"), self)
         toolbar_shortcut.activated.connect(lambda: self.show_floating_toolbar())
+            
+    def setup_toolbar_shortcut(self):
+        """设置悬浮工具栏快捷键"""
+        # 删除旧的快捷键
+        if self.toolbar_shortcut:
+            self.toolbar_shortcut.deleteLater()
+            
+        # 根据设置添加新快捷键
+        hotkey = self.toolbar_hotkey or "Alt"
+        self.toolbar_shortcut = QShortcut(QKeySequence(hotkey), self)
+        self.toolbar_shortcut.activated.connect(lambda: self.show_floating_toolbar())
+        
+    def reload_toolbar_shortcut(self, hotkey):
+        """重新加载悬浮工具栏快捷键"""
+        self.toolbar_hotkey = hotkey
+        self.setup_toolbar_shortcut()
         
     def create_menu_bar(self):
         """创建菜单栏"""
