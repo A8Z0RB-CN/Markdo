@@ -2,7 +2,7 @@
 ; 使用方法: 安装 Inno Setup 后，右键点击此文件选择 Compile
 
 #define MyAppName "Markdo"
-#define MyAppVersion "1.0.1"
+#define MyAppVersion "1.0.2"
 #define MyAppPublisher "A8Z0RB"
 #define MyAppExeName "Markdo.exe"
 #define MyAppAssocName "Markdown文件"

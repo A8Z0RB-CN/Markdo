@@ -75,7 +75,7 @@ executables = [
 
 setup(
     name="Markdo",
-    version="1.0.1",
+    version="1.0.2",
     description="PyQt6 Markdown编辑器",
     options={"build_exe": build_exe_options},
     executables=executables
