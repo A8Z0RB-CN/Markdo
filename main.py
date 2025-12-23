@@ -285,7 +285,7 @@ class SettingsDialog(QDialog):
         toolbar_layout.addLayout(hotkey_layout)
         
         # 提示信息
-        hint_label = QLabel("提示：默认快捷键为 Alt，可点击输入框自定义")
+        hint_label = QLabel("提示：默认快捷键 Alt，Ctrl+M 也可使用，可自定义")
         hint_label.setStyleSheet(f"color: {theme['text_secondary']}; font-size: 11px;")
         toolbar_layout.addWidget(hint_label)
         
@@ -479,36 +479,30 @@ class MarkdownHighlighter(QSyntaxHighlighter):
 
 
 class MarkdownTextEdit(QTextEdit):
-    """自定义Markdown编辑器 - 支持列表自动接续和Tab唤出悬浮窗"""
-    
-    # 定义信号：Tab键触发
-    tab_pressed = pyqtSignal()
+    """自定义Markdown编辑器 - 支持列表自动接续和Tab自动补全"""
     
     def keyPressEvent(self, event):
         """处理键盘事件"""
-        # Tab键可以自动补全Markdown语法
+        # Tab键仅执行自动补全（不再召起悬浮窗）
         if event.key() == Qt.Key.Key_Tab:
-            if self.handle_tab_completion():
-                return  # 已处理自动补全
-            # 否则触发悬浮窗信号
-            self.tab_pressed.emit()
+            self.handle_tab_completion()
             return  # 不继续默认行为（不插入缩进）
-            
+        
         # 回车键处理列表自动接续
         if event.key() == Qt.Key.Key_Return or event.key() == Qt.Key.Key_Enter:
             if self.handle_list_continuation():
                 return  # 已处理，不继续默认行为
-            
+        
         # 调用父类默认处理
         super().keyPressEvent(event)
         
     def handle_tab_completion(self):
-        """处理Tab自动补全，返回 True 表示已处理"""
+        """处理Tab自动补全（不返回，程序会处理）"""
         cursor = self.textCursor()
         cursor.movePosition(QTextCursor.MoveOperation.StartOfLine, QTextCursor.MoveMode.KeepAnchor)
         line_text = cursor.selectedText()
         cursor = self.textCursor()  # 恢复原始光标
-            
+        
         # Markdown自动补全双序列
         completions = {
             '**': '**',  # 粗体
@@ -522,21 +516,18 @@ class MarkdownTextEdit(QTextEdit):
             '(': ')',   # 括号
             '{': '}',   # 花括号
         }
-            
+        
         # 检查最后一个字符是否是需要补全的
         if line_text and line_text[-1] in completions:
             last_char = line_text[-1]
             # 不处理已经配对的情况
             if len(line_text) >= 2 and line_text[-2] + line_text[-1] in completions:
-                return False
-                
+                return
+            
             cursor.insertText(completions[last_char])
             # 移动光标到中间
             cursor.movePosition(QTextCursor.MoveOperation.Left, QTextCursor.MoveMode.MoveAnchor, len(completions[last_char]))
             self.setTextCursor(cursor)
-            return True
-            
-        return False  # 未处理
     
     def handle_list_continuation(self):
         """处理列表自动接续，返回True表示已处理"""
@@ -1938,9 +1929,6 @@ class MarkdownEditor(QMainWindow):
         
         # 编辑器焦点事件 - 用于自动显示/隐藏悬浮工具栏
         editor.installEventFilter(self)
-        
-        # Tab键触发悬浮工具栏
-        editor.tab_pressed.connect(self.show_floating_toolbar)
         
         # 右侧：预览
         preview = QWebEngineView()
