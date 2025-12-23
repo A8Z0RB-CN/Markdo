@@ -2285,14 +2285,23 @@ class MarkdownEditor(QMainWindow):
         margin: 0;
         background-color: #fff;
         overflow-x: hidden;
+        word-wrap: break-word;
+        word-break: break-word;
     }}
-    p {{ margin: 0 0 16px 0; }}
+    p {{ 
+        margin: 0 0 16px 0;
+        word-wrap: break-word;
+        word-break: break-word;
+        white-space: pre-wrap;
+    }}
     h1, h2, h3, h4, h5, h6 {{
         margin-top: 24px;
         margin-bottom: 16px;
         font-weight: 600;
         line-height: 1.25;
         color: #24292e;
+        word-wrap: break-word;
+        word-break: break-word;
     }}
     h1 {{ font-size: 2em; border-bottom: 2px solid #eaecef; padding-bottom: 0.3em; }}
     h2 {{ font-size: 1.5em; border-bottom: 1px solid #eaecef; padding-bottom: 0.3em; }}
@@ -2330,17 +2339,37 @@ class MarkdownEditor(QMainWindow):
         color: #6a737d;
         margin: 0 0 16px 0;
         background-color: #f8f9fa;
+        word-wrap: break-word;
+        word-break: break-word;
     }}
     blockquote blockquote {{ margin: 8px 0; border-left-color: #c0c0c0; }}
     blockquote p {{ margin: 0.5em 0; }}
-    table {{ border-collapse: collapse; width: auto; max-width: 100%; margin: 16px 0; display: table; }}
-    table th, table td {{ border: 1px solid #dfe2e5; padding: 8px 12px; text-align: left; vertical-align: top; }}
+    table {{ 
+        border-collapse: collapse; 
+        width: auto; 
+        max-width: 100%; 
+        margin: 16px 0; 
+        display: table;
+        table-layout: auto;
+    }}
+    table th, table td {{ 
+        border: 1px solid #dfe2e5; 
+        padding: 8px 12px; 
+        text-align: left; 
+        vertical-align: top;
+        word-wrap: break-word;
+        word-break: break-word;
+    }}
     table th {{ background-color: #f6f8fa; font-weight: 600; }}
     table tr:nth-child(2n) {{ background-color: #f6f8fa; }}
     table td strong, table td b {{ font-weight: 700; color: #24292e; }}
     table td em, table td i {{ font-style: italic; }}
     ul, ol {{ padding-left: 2em; margin: 0 0 16px 0; }}
-    li {{ margin: 0.5em 0; }}
+    li {{ 
+        margin: 0.5em 0;
+        word-wrap: break-word;
+        word-break: break-word;
+    }}
     li > p {{ margin: 0.5em 0; }}
     input[type="checkbox"] {{ margin-right: 0.5em; }}
     hr {{ height: 0.25em; padding: 0; margin: 24px 0; background-color: #e1e4e8; border: 0; }}
