@@ -497,37 +497,66 @@ class MarkdownTextEdit(QTextEdit):
         super().keyPressEvent(event)
         
     def handle_tab_completion(self):
-        """处理Tab自动补全（不返回，程序会处理）"""
+        """处理Tab自动补全 - 渐进式补全，有上限"""
         cursor = self.textCursor()
-        cursor.movePosition(QTextCursor.MoveOperation.StartOfLine, QTextCursor.MoveMode.KeepAnchor)
-        line_text = cursor.selectedText()
-        cursor = self.textCursor()  # 恢复原始光标
         
-        # Markdown自动补全双序列
-        completions = {
-            '**': '**',  # 粗体
-            '__': '__',
-            '*': '*',   # 斜体
-            '_': '_',
-            '~~': '~~', # 删除线
-            '==': '==', # 高亮
-            '`': '`',   # 行内代码
-            '[': '](',  # 链接
-            '(': ')',   # 括号
-            '{': '}',   # 花括号
+        # 获取光标前后的文本
+        block = cursor.block()
+        line_text = block.text()
+        col = cursor.positionInBlock()
+        
+        before_text = line_text[:col]
+        after_text = line_text[col:]
+        
+        if not before_text:
+            return
+        
+        last_char = before_text[-1]
+        
+        # 定义成对符号及其最大层级
+        pair_symbols = {
+            '*': ('*', 2),   # 最多 2 层（****），对应 Markdown 斜体/粗体
+            '_': ('_', 2),   # 最多 2 层
+            '~': ('~', 1),   # 最多 1 层（~~），删除线
+            '=': ('=', 1),   # 最多 1 层（==），高亮
+            '`': ('`', 1),   # 最多 1 层
+            '[': (']', 1),   # 链接只补全一次
+            '(': (')', 1),   # 括号只补全一次
+            '{': ('}', 1),   # 花括号只补全一次
         }
         
-        # 检查最后一个字符是否是需要补全的
-        if line_text and line_text[-1] in completions:
-            last_char = line_text[-1]
-            # 不处理已经配对的情况
-            if len(line_text) >= 2 and line_text[-2] + line_text[-1] in completions:
-                return
+        if last_char in pair_symbols:
+            expected_closing, max_level = pair_symbols[last_char]
             
-            cursor.insertText(completions[last_char])
-            # 移动光标到中间
-            cursor.movePosition(QTextCursor.MoveOperation.Left, QTextCursor.MoveMode.MoveAnchor, len(completions[last_char]))
-            self.setTextCursor(cursor)
+            # 检查光标后面是否有对应的闭合符号（光标在成对符号中间）
+            if after_text and after_text[0] == expected_closing:
+                # 计算当前已有的符号层级
+                current_level = 1
+                # 向前数连续的相同符号
+                for i in range(len(before_text) - 2, -1, -1):
+                    if before_text[i] == last_char:
+                        current_level += 1
+                    else:
+                        break
+                
+                # 检查是否达到上限
+                if current_level >= max_level:
+                    return  # 已达上限，不再补全
+                
+                # 扩展符号：*|* -> **|**
+                cursor.insertText(expected_closing + last_char)
+                cursor.movePosition(QTextCursor.MoveOperation.Left, QTextCursor.MoveMode.MoveAnchor, 1)
+                self.setTextCursor(cursor)
+            else:
+                # 普通补全：* -> *|*
+                if last_char == '[':
+                    # 链接特殊处理：[ -> []()  光标在 ] 前面
+                    cursor.insertText(']()')
+                    cursor.movePosition(QTextCursor.MoveOperation.Left, QTextCursor.MoveMode.MoveAnchor, 3)
+                else:
+                    cursor.insertText(expected_closing)
+                    cursor.movePosition(QTextCursor.MoveOperation.Left, QTextCursor.MoveMode.MoveAnchor, 1)
+                self.setTextCursor(cursor)
     
     def handle_list_continuation(self):
         """处理列表自动接续，返回True表示已处理"""
