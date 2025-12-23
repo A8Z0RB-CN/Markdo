@@ -2872,7 +2872,15 @@ def main():
     
     # 设置应用图标
     import os
-    icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'Markdo.png')
+    # 兼容打包后的路径
+    if getattr(sys, 'frozen', False):
+        # 打包后的可执行文件
+        application_path = os.path.dirname(sys.executable)
+    else:
+        # 开发环境
+        application_path = os.path.dirname(os.path.abspath(__file__))
+    
+    icon_path = os.path.join(application_path, 'Markdo.png')
     if os.path.exists(icon_path):
         app.setWindowIcon(QIcon(icon_path))
     

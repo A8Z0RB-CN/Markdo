@@ -33,9 +33,11 @@ ENV/
 
 # PyInstaller
 *.manifest
+*.spec
 
-# Installer
-installer/
+# cx_Freeze
+build/
+installer_cx/
 
 # Logs
 *.log

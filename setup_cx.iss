@@ -1,4 +1,4 @@
-; Markdo 安装程序脚本 - Inno Setup
+; Markdo cx_Freeze 安装程序脚本 - Inno Setup
 ; 使用方法: 安装 Inno Setup 后，右键点击此文件选择 Compile
 
 #define MyAppName "Markdo"
@@ -10,7 +10,7 @@
 #define MyAppAssocKey StringChange(MyAppAssocName, " ", "") + MyAppAssocExt
 
 [Setup]
-AppId={{A8Z0RB-MARKDO-2024}
+AppId={{A8Z0RB-MARKDO-CX-2024}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
@@ -18,8 +18,8 @@ DefaultDirName={autopf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
 ; 输出安装程序的位置和名称
-OutputDir=installer
-OutputBaseFilename=Markdo_Setup_{#MyAppVersion}
+OutputDir=installer_cx
+OutputBaseFilename=Markdo_Setup_CX_{#MyAppVersion}
 ; 压缩设置
 Compression=lzma2/max
 SolidCompression=yes
@@ -30,9 +30,9 @@ PrivilegesRequired=admin
 ; 64位安装
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
-; 应用图标 (如果有的话)
-; SetupIconFile=icon.ico
-; UninstallDisplayIcon={app}\{#MyAppExeName}
+; 应用图标
+SetupIconFile=Markdo.ico
+UninstallDisplayIcon={app}\{#MyAppExeName}
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -42,8 +42,8 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Name: "quicklaunchicon"; Description: "{cm:CreateQuickLaunchIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked; OnlyBelowVersion: 6.1; Check: not IsAdminInstallMode
 
 [Files]
-; 复制打包后的所有文件
-Source: "dist\Markdo\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+; 复制cx_Freeze打包后的所有文件
+Source: "build\exe.win-amd64-3.13\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; 注意: 不要在任何共享系统文件上使用 "Flags: ignoreversion"
 
 [Icons]
