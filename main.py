@@ -21,6 +21,15 @@ from datetime import datetime
 
 
 # ==================== 主题系统 ====================
+class CustomMenuBar(QMenuBar):
+    """自定义菜单栏 - 拦截 Alt 键的激活"""
+    def keyPressEvent(self, event):
+        from PyQt6.QtCore import Qt
+        # 拦截 Alt 键的激活，不埳父类处理
+        if event.key() == Qt.Key.Key_Alt:
+            return
+        super().keyPressEvent(event)
+
 class Theme:
     """主题配置"""
     DARK = {
@@ -1694,8 +1703,11 @@ class MarkdownEditor(QMainWindow):
             self.setWindowIcon(QIcon(icon_path))
         
         # 禁用菜单栏的 Alt 快捷键（不需要 Alt 来激活菜单）
-        self.menuBar().setStyleSheet("QMenuBar { menu-scrollable: 1; }")
-        self.menuBar().setAltBarVisibility(False) if hasattr(self.menuBar(), 'setAltBarVisibility') else None
+        custom_menubar = CustomMenuBar(self)
+        self.setMenuBar(custom_menubar)
+        custom_menubar.setStyleSheet("QMenuBar { menu-scrollable: 1; }")
+        # 设置菜单栏不接受 Tab 焦点，也不会响应 Alt 键
+        custom_menubar.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         
         # 创建中心部件
         central_widget = QWidget()
@@ -2662,14 +2674,6 @@ window.MathJax = {{
             if focused_widget is None or not self.floating_toolbar.isAncestorOf(focused_widget):
                 self.floating_toolbar.hide()
     
-    def keyPressEvent(self, event):
-        """处理键盘事件 - Alt 键画为悬浮窗事件"""
-        from PyQt6.QtCore import Qt
-        # Alt 键不导致菜单栏激活，而是按会通过 QShortcut 处理
-        if event.key() == Qt.Key.Key_Alt:
-            # 拦止 Alt 键到达菜单栏
-            return
-        super().keyPressEvent(event)
 
 
 def main():
