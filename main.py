@@ -1,6 +1,6 @@
 """
-Markdo - PyQt6版本
-完整重写，提供更好的HTML/CSS渲染支持
+Markdo - PyQt6
+提供更好的HTML/CSS渲染支持
 """
 import sys
 import markdown
@@ -9,8 +9,7 @@ from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QTextEdit, QTabWidget, QToolBar, QPushButton, QFileDialog,
     QMessageBox, QSplitter, QLabel, QStatusBar, QMenuBar, QMenu,
-    QDialog, QGridLayout, QGroupBox, QToolButton, QCheckBox, QComboBox,
-    QStackedWidget
+    QDialog, QGridLayout, QGroupBox, QToolButton, QCheckBox, QComboBox
 )
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWebEngineCore import QWebEngineSettings
@@ -30,13 +29,14 @@ class Theme:
         'bg_tertiary': '#2d2d30',
         'text': '#d4d4d4',
         'text_secondary': '#9d9d9d',
-        'accent': '#0078d4',
-        'accent_hover': '#1e90ff',
+        'accent': '#ffffff',  # 白色强调色
+        'accent_hover': '#e0e0e0',
+        'accent_text': '#1e1e1e',  # 强调色背景上的文字色（黑色）
         'border': '#3c3c3c',
         'editor_bg': '#1e1e1e',
         'editor_text': '#d4d4d4',
         'toolbar_bg': '#2d2d30',
-        'status_bg': '#333337',  # 深灰色，比背景稍亮
+        'status_bg': '#333337',
         'status_text': '#cccccc',
     }
     
@@ -47,13 +47,14 @@ class Theme:
         'bg_tertiary': '#e9ecef',
         'text': '#333333',
         'text_secondary': '#6c757d',
-        'accent': '#007bff',
-        'accent_hover': '#0056b3',
+        'accent': '#333333',  # 黑色强调色
+        'accent_hover': '#555555',
+        'accent_text': '#ffffff',  # 强调色背景上的文字色（白色）
         'border': '#dee2e6',
         'editor_bg': '#ffffff',
         'editor_text': '#333333',
         'toolbar_bg': '#f8f9fa',
-        'status_bg': '#e9ecef',  # 浅灰色，比背景稍暗
+        'status_bg': '#e9ecef',
         'status_text': '#495057',
     }
     
@@ -79,7 +80,7 @@ class Theme:
             }}
             QMenuBar::item:selected {{
                 background-color: {theme['accent']};
-                color: white;
+                color: {theme['accent_text']};
             }}
             QMenu {{
                 background-color: {theme['bg_secondary']};
@@ -88,7 +89,7 @@ class Theme:
             }}
             QMenu::item:selected {{
                 background-color: {theme['accent']};
-                color: white;
+                color: {theme['accent_text']};
             }}
             QToolBar {{
                 background-color: {theme['toolbar_bg']};
@@ -105,7 +106,7 @@ class Theme:
             }}
             QToolBar QPushButton:hover {{
                 background-color: {theme['accent']};
-                color: white;
+                color: {theme['accent_text']};
                 border-color: {theme['accent']};
             }}
             QTabWidget::pane {{
@@ -131,6 +132,7 @@ class Theme:
                 color: {theme['editor_text']};
                 border: none;
                 selection-background-color: {theme['accent']};
+                selection-color: {theme['accent_text']};
             }}
             QStatusBar {{
                 background-color: {theme['status_bg']};
@@ -220,10 +222,11 @@ class SettingsDialog(QDialog):
                 background-color: {theme['bg']};
                 color: {theme['text']};
                 selection-background-color: {theme['accent']};
+                selection-color: {theme['accent_text']};
             }}
             QPushButton {{
                 background-color: {theme['accent']};
-                color: white;
+                color: {theme['accent_text']};
                 border: none;
                 padding: 8px 20px;
                 border-radius: 4px;
@@ -231,6 +234,7 @@ class SettingsDialog(QDialog):
             }}
             QPushButton:hover {{
                 background-color: {theme['accent_hover']};
+                color: {theme['accent_text']};
             }}
         """)
         
@@ -563,329 +567,286 @@ class MarkdownTextEdit(QTextEdit):
 
 
 class FloatingMarkdownToolbar(QDialog):
-    """紧凑型悬浮Markdown工具栏 - 跟随光标且不遗挡文本"""
+    """悬浮Markdown工具栏 - 折叠菜单样式 + 鼠标控制"""
     
     def __init__(self, parent=None):
         super().__init__(parent, 
                          Qt.WindowType.Tool | 
                          Qt.WindowType.FramelessWindowHint |
-                         Qt.WindowType.WindowDoesNotAcceptFocus)  # 不获取焦点，不置顶
+                         Qt.WindowType.WindowDoesNotAcceptFocus)  # 不接受焦点
         self.parent_editor = parent
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)  # 显示时不激活
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)  # 启用透明背景
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)  # 透明背景
         self.init_ui()
     
     def get_theme(self):
         """获取当前主题"""
         if self.parent_editor and hasattr(self.parent_editor, 'current_theme'):
             return self.parent_editor.current_theme
-        return Theme.DARK  # 默认暗色主题
+        return Theme.DARK
         
     def init_ui(self):
-        """初始化UI - 分页标签布局"""
+        """初始化UI - 折叠菜单布局"""
         theme = self.get_theme()
         is_dark = theme['name'] == 'dark'
         
         if is_dark:
-            bg_color = "rgba(45, 45, 48, 0.95)"
-            btn_bg = "rgba(60, 60, 64, 0.9)"
-            btn_hover = "rgba(0, 120, 212, 0.9)"
-            btn_pressed = "rgba(0, 90, 180, 0.9)"
-            text_color = "#d4d4d4"
-            border_color = "rgba(0, 120, 212, 0.8)"
-            btn_border = "rgba(80, 80, 84, 0.8)"
-            tab_bg = "rgba(50, 50, 54, 0.9)"
-            tab_active = "rgba(0, 120, 212, 0.9)"
+            bg_color = "rgba(40, 40, 44, 0.60)"  # 40%透明度
+            btn_bg = "rgba(55, 55, 60, 0.85)"
+            btn_hover = "rgba(255, 255, 255, 0.95)"  # 白色
+            text_color = "#e0e0e0"
+            border_color = "rgba(80, 80, 90, 0.7)"
+            menu_bg = "rgba(45, 45, 50, 0.95)"
+            menu_hover = "rgba(255, 255, 255, 0.9)"  # 白色
+            menu_border = "rgba(70, 70, 80, 0.8)"
+            hover_text = "#1e1e1e"  # 悬停时文字变黑
         else:
-            bg_color = "rgba(255, 255, 255, 0.95)"
-            btn_bg = "rgba(248, 249, 250, 0.9)"
-            btn_hover = "rgba(0, 123, 255, 0.9)"
-            btn_pressed = "rgba(0, 86, 179, 0.9)"
+            bg_color = "rgba(255, 255, 255, 0.60)"  # 40%透明度
+            btn_bg = "rgba(245, 245, 248, 0.9)"
+            btn_hover = "rgba(51, 51, 51, 0.9)"  # 黑色
             text_color = "#333"
-            border_color = "rgba(0, 123, 255, 0.8)"
-            btn_border = "rgba(222, 226, 230, 0.8)"
-            tab_bg = "rgba(240, 240, 240, 0.9)"
-            tab_active = "rgba(0, 123, 255, 0.9)"
+            border_color = "rgba(200, 200, 210, 0.8)"
+            menu_bg = "rgba(255, 255, 255, 0.98)"
+            menu_hover = "rgba(51, 51, 51, 0.85)"  # 黑色
+            menu_border = "rgba(220, 220, 230, 0.9)"
+            hover_text = "#ffffff"  # 悬停时文字变白
         
         self.setStyleSheet(f"""
             QDialog {{
                 background-color: {bg_color};
                 border: 1px solid {border_color};
-                border-radius: 6px;
+                border-radius: 8px;
             }}
-            QPushButton {{
+            QToolButton {{
                 background-color: {btn_bg};
                 color: {text_color};
-                border: 1px solid {btn_border};
-                padding: 3px 6px;
-                border-radius: 3px;
-                font-size: 11px;
-                min-width: 28px;
-                max-width: 50px;
+                border: 1px solid {border_color};
+                padding: 6px 12px;
+                border-radius: 6px;
+                font-size: 12px;
+                font-weight: 500;
             }}
-            QPushButton:hover {{
+            QToolButton:hover {{
                 background-color: {btn_hover};
-                color: white;
+                color: {hover_text};
                 border-color: {theme['accent']};
             }}
-            QPushButton:pressed {{
-                background-color: {btn_pressed};
+            QToolButton:pressed {{
+                background-color: {btn_hover};
+                color: {hover_text};
+                border-color: {theme['accent']};
             }}
-            QPushButton#tabBtn {{
-                min-width: 50px;
-                max-width: 60px;
-                padding: 4px 8px;
-                border-radius: 4px 4px 0 0;
-                border-bottom: none;
+            QToolButton[popupMode="1"]:pressed {{
+                background-color: {btn_hover};
+                color: {hover_text};
             }}
-            QPushButton#tabBtn:checked {{
-                background-color: {tab_active};
+            QToolButton::menu-indicator {{
+                image: none;
+                width: 0px;
+            }}
+            QMenu {{
+                background-color: {menu_bg};
+                border: 1px solid {menu_border};
+                border-radius: 6px;
+                padding: 4px;
+            }}
+            QMenu::item {{
+                background-color: transparent;
+                color: {text_color};
+                padding: 6px 20px 6px 10px;
+                border-radius: 4px;
+                margin: 2px 4px;
+            }}
+            QMenu::item:selected {{
+                background-color: {menu_hover};
+                color: {hover_text};
+            }}
+            QMenu::separator {{
+                height: 1px;
+                background-color: {border_color};
+                margin: 4px 8px;
+            }}
+            QPushButton#closeBtn {{
+                background-color: rgba(220, 53, 69, 0.9);
                 color: white;
+                border: none;
+                border-radius: 4px;
+                padding: 4px 8px;
+                font-size: 11px;
             }}
-            QLabel {{
-                color: {theme['text_secondary']};
+            QPushButton#closeBtn:hover {{
+                background-color: rgba(200, 35, 51, 1.0);
             }}
         """)
         
-        main_layout = QVBoxLayout()
-        main_layout.setContentsMargins(4, 4, 4, 4)
-        main_layout.setSpacing(2)
+        main_layout = QHBoxLayout()
+        main_layout.setContentsMargins(6, 6, 6, 6)
+        main_layout.setSpacing(4)
         
-        # 标签页按钮行
-        tab_row = QHBoxLayout()
-        tab_row.setSpacing(2)
+        # === 基础格式菜单 ===
+        basic_btn = self._create_menu_button("📝 基础", "标题和文本格式")
+        basic_menu = self._create_menu()
         
-        self.tab_buttons = []
-        tab_names = ["基础", "列表", "插入", "LaTeX"]
-        for i, name in enumerate(tab_names):
-            btn = QPushButton(name)
-            btn.setObjectName("tabBtn")
-            btn.setCheckable(True)
-            btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-            btn.clicked.connect(lambda c, idx=i: self.switch_tab(idx))
-            if i == 0:
-                btn.setChecked(True)
-            tab_row.addWidget(btn)
-            self.tab_buttons.append(btn)
+        # 标题子菜单
+        header_menu = basic_menu.addMenu("🅽 标题")
+        for i in range(1, 7):
+            action = header_menu.addAction(f"H{i} - {'#'*i} 标题{i}")
+            action.triggered.connect(lambda c, l=i: self.insert_header(l))
+        
+        basic_menu.addSeparator()
+        
+        # 格式按钮
+        format_items = [
+            ("🅱️ 粗体", "**", "**", "Ctrl+B"),
+            ("🅸️ 斜体", "*", "*", "Ctrl+I"),
+            ("S̶ 删除线", "~~", "~~", "Ctrl+D"),
+            ("🟡 高亮", "==", "==", "Ctrl+H"),
+            ("💻 行内代码", "`", "`", "Ctrl+`")
+        ]
+        for text, prefix, suffix, shortcut in format_items:
+            action = basic_menu.addAction(f"{text}  {shortcut}")
+            action.triggered.connect(lambda c, p=prefix, s=suffix: self.insert_format(p, s))
+        
+        basic_btn.setMenu(basic_menu)
+        main_layout.addWidget(basic_btn)
+        
+        # === 列表引用菜单 ===
+        list_btn = self._create_menu_button("📝 列表", "列表和引用")
+        list_menu = self._create_menu()
+        
+        list_items = [
+            ("• 无序列表", "- "),
+            ("1. 有序列表", "1. "),
+            ("☐ 任务列表", "- [ ] "),
+            ("☑ 已完成", "- [x] ")
+        ]
+        for text, marker in list_items:
+            action = list_menu.addAction(text)
+            action.triggered.connect(lambda c, m=marker: self.insert_list_marker(m))
+        
+        list_menu.addSeparator()
+        
+        quote_items = [
+            ("> 一级引用", "> "),
+            (">> 二级引用", ">> "),
+            (">>> 三级引用", ">>> ")
+        ]
+        for text, marker in quote_items:
+            action = list_menu.addAction(text)
+            action.triggered.connect(lambda c, m=marker: self.insert_list_marker(m))
+        
+        list_btn.setMenu(list_menu)
+        main_layout.addWidget(list_btn)
+        
+        # === 插入元素菜单 ===
+        insert_btn = self._create_menu_button("➕ 插入", "插入各种元素")
+        insert_menu = self._create_menu()
+        
+        insert_items = [
+            ("🔗 链接", self.insert_link),
+            ("🖼️ 图片", self.insert_image),
+            ("📊 表格", self.insert_table),
+            ("💻 代码块", self.insert_code_block),
+            ("── 分割线", self.insert_hr),
+            ("⏰ 时间戳", self.insert_timestamp),
+            ("📌 脚注", self.insert_footnote),
+            ("📑 目录", self.insert_toc)
+        ]
+        for text, func in insert_items:
+            action = insert_menu.addAction(text)
+            action.triggered.connect(func)
+        
+        insert_btn.setMenu(insert_menu)
+        main_layout.addWidget(insert_btn)
+        
+        # === LaTeX公式菜单 ===
+        latex_btn = self._create_menu_button("∑ LaTeX", "数学公式")
+        latex_menu = self._create_menu()
+        
+        # 公式类型
+        latex_menu.addAction("$ 行内公式").triggered.connect(lambda: self.insert_format("$", "$"))
+        latex_menu.addAction("$$ 公式块").triggered.connect(self.insert_math_block)
+        latex_menu.addAction("\\[...\\] 公式块").triggered.connect(self.insert_math_block_bracket)
+        
+        latex_menu.addSeparator()
+        
+        # 常用符号子菜单
+        symbols_menu = latex_menu.addMenu("🔣 常用符号")
+        symbols = [
+            ("∑ 求和", "\\sum_{i=1}^{n}"),
+            ("∏ 连乘", "\\prod_{i=1}^{n}"),
+            ("∫ 积分", "\\int_{a}^{b}"),
+            ("√ 根号", "\\sqrt{}"),
+            ("÷ 分数", "\\frac{}{}"),
+            ("x² 上标", "^{}"),
+            ("x₂ 下标", "_{}")
+        ]
+        for text, template in symbols:
+            action = symbols_menu.addAction(text)
+            action.triggered.connect(lambda c, t=template: self.insert_latex_template(t))
+        
+        # 希腊字母子菜单
+        greek_menu = latex_menu.addMenu("αβ 希腊字母")
+        greeks = [
+            ("α alpha", "\\alpha"), ("β beta", "\\beta"),
+            ("γ gamma", "\\gamma"), ("δ delta", "\\delta"),
+            ("ε epsilon", "\\epsilon"), ("θ theta", "\\theta"),
+            ("λ lambda", "\\lambda"), ("μ mu", "\\mu"),
+            ("π pi", "\\pi"), ("σ sigma", "\\sigma"),
+            ("φ phi", "\\phi"), ("ω omega", "\\omega")
+        ]
+        for text, template in greeks:
+            action = greek_menu.addAction(text)
+            action.triggered.connect(lambda c, t=template: self.insert_latex_template(t))
+        
+        # 关系符号子菜单
+        relation_menu = latex_menu.addMenu("≠ 关系符号")
+        relations = [
+            ("≠ 不等于", "\\neq"),
+            ("≈ 约等于", "\\approx"),
+            ("≤ 小于等于", "\\leq"),
+            ("≥ 大于等于", "\\geq"),
+            ("≪ 远小于", "\\ll"),
+            ("≫ 远大于", "\\gg"),
+            ("∝ 正比于", "\\propto"),
+            ("∞ 无穷大", "\\infty")
+        ]
+        for text, template in relations:
+            action = relation_menu.addAction(text)
+            action.triggered.connect(lambda c, t=template: self.insert_latex_template(t))
+        
+        latex_btn.setMenu(latex_menu)
+        main_layout.addWidget(latex_btn)
+        
+        # 弹性空间
+        main_layout.addStretch()
         
         # 关闭按钮
         close_btn = QPushButton("✕")
-        close_btn.setStyleSheet("background-color: #dc3545; color: white; border: none; max-width: 20px;")
+        close_btn.setObjectName("closeBtn")
         close_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         close_btn.setToolTip("关闭工具栏")
         close_btn.clicked.connect(self.hide)
-        tab_row.addWidget(close_btn)
-        main_layout.addLayout(tab_row)
+        main_layout.addWidget(close_btn)
         
-        # 内容区域堆叠布局
-        self.content_stack = QStackedWidget()
-        
-        # 创建四个分页
-        self.content_stack.addWidget(self._create_basic_page())
-        self.content_stack.addWidget(self._create_list_page())
-        self.content_stack.addWidget(self._create_insert_page())
-        self.content_stack.addWidget(self._create_latex_page())
-        
-        main_layout.addWidget(self.content_stack)
         self.setLayout(main_layout)
         self.adjustSize()
     
-    def switch_tab(self, index):
-        """切换标签页"""
-        self.content_stack.setCurrentIndex(index)
-        for i, btn in enumerate(self.tab_buttons):
-            btn.setChecked(i == index)
+    def _create_menu_button(self, text, tooltip):
+        """创建菜单按钮"""
+        btn = QToolButton()
+        btn.setText(text)
+        btn.setToolTip(tooltip)
+        btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)  # 不获取焦点
+        return btn
     
-    def _create_basic_page(self):
-        """创建基础页 - 标题和格式"""
-        page = QWidget()
-        layout = QVBoxLayout(page)
-        layout.setContentsMargins(0, 4, 0, 0)
-        layout.setSpacing(2)
-        
-        # 标题行
-        row1 = QHBoxLayout()
-        row1.setSpacing(2)
-        for i in range(1, 7):
-            btn = self._create_btn(f"H{i}", lambda c, l=i: self.insert_header(l), f"标题{i}")
-            row1.addWidget(btn)
-        layout.addLayout(row1)
-        
-        # 格式行
-        row2 = QHBoxLayout()
-        row2.setSpacing(2)
-        format_btns = [
-            ("B", "**", "**", "粗体"), 
-            ("I", "*", "*", "斜体"), 
-            ("BI", "***", "***", "粗斜体"),
-            ("S", "~~", "~~", "删除线"),
-            ("H", "==", "==", "高亮"), 
-            ("`", "`", "`", "行内代码")
-        ]
-        for text, p, s, tip in format_btns:
-            btn = self._create_btn(text, lambda c, pr=p, su=s: self.insert_format(pr, su), tip)
-            if text == "B":
-                btn.setStyleSheet(btn.styleSheet() + "font-weight: bold;")
-            elif text == "I":
-                btn.setStyleSheet(btn.styleSheet() + "font-style: italic;")
-            elif text == "S":
-                btn.setStyleSheet(btn.styleSheet() + "text-decoration: line-through;")
-            row2.addWidget(btn)
-        layout.addLayout(row2)
-        
-        return page
-    
-    def _create_list_page(self):
-        """创建列表页 - 列表和引用"""
-        page = QWidget()
-        layout = QVBoxLayout(page)
-        layout.setContentsMargins(0, 4, 0, 0)
-        layout.setSpacing(2)
-        
-        # 列表行
-        row1 = QHBoxLayout()
-        row1.setSpacing(2)
-        list_btns = [
-            ("•", "- ", "无序列表"), 
-            ("1.", "1. ", "有序列表"), 
-            ("☐", "- [ ] ", "任务列表"), 
-            ("☑", "- [x] ", "已完成")
-        ]
-        for text, marker, tip in list_btns:
-            btn = self._create_btn(text, lambda c, m=marker: self.insert_list_marker(m), tip)
-            row1.addWidget(btn)
-        layout.addLayout(row1)
-        
-        # 引用行
-        row2 = QHBoxLayout()
-        row2.setSpacing(2)
-        quote_btns = [
-            (">", "> ", "引用"),
-            (">>", ">> ", "二级引用"),
-            (">>>", ">>> ", "三级引用")
-        ]
-        for text, marker, tip in quote_btns:
-            btn = self._create_btn(text, lambda c, m=marker: self.insert_list_marker(m), tip)
-            row2.addWidget(btn)
-        layout.addLayout(row2)
-        
-        return page
-    
-    def _create_insert_page(self):
-        """创建插入页 - 链接、图片、表格等"""
-        page = QWidget()
-        layout = QVBoxLayout(page)
-        layout.setContentsMargins(0, 4, 0, 0)
-        layout.setSpacing(2)
-        
-        # 第一行
-        row1 = QHBoxLayout()
-        row1.setSpacing(2)
-        insert_btns1 = [
-            ("🔗", self.insert_link, "插入链接"), 
-            ("🖼", self.insert_image, "插入图片"), 
-            ("☰", self.insert_table, "插入表格"), 
-            ("</>", self.insert_code_block, "代码块")
-        ]
-        for text, func, tip in insert_btns1:
-            btn = self._create_btn(text, lambda c, f=func: f(), tip)
-            row1.addWidget(btn)
-        layout.addLayout(row1)
-        
-        # 第二行
-        row2 = QHBoxLayout()
-        row2.setSpacing(2)
-        insert_btns2 = [
-            ("─", self.insert_separator, "分割线"),
-            ("⏰", self.insert_timestamp, "时间戳"),
-            ("📌", self.insert_footnote, "脚注"),
-            ("📑", self.insert_toc, "目录")
-        ]
-        for text, func, tip in insert_btns2:
-            btn = self._create_btn(text, lambda c, f=func: f(), tip)
-            row2.addWidget(btn)
-        layout.addLayout(row2)
-        
-        return page
-    
-    def _create_latex_page(self):
-        """创建LaTeX页 - 数学公式"""
-        page = QWidget()
-        layout = QVBoxLayout(page)
-        layout.setContentsMargins(0, 4, 0, 0)
-        layout.setSpacing(2)
-        
-        # 行内公式
-        row1 = QHBoxLayout()
-        row1.setSpacing(2)
-        inline_btns = [
-            ("$x$", "$", "$", "行内公式 $...$"),
-            ("\\(...\\)", "\\(", "\\)", "行内公式 \\(...\\)")
-        ]
-        for text, p, s, tip in inline_btns:
-            btn = self._create_btn(text, lambda c, pr=p, su=s: self.insert_format(pr, su), tip)
-            row1.addWidget(btn)
-        layout.addLayout(row1)
-        
-        # 公式块
-        row2 = QHBoxLayout()
-        row2.setSpacing(2)
-        block_btns = [
-            ("$$", self.insert_math_block, "公式块 $$...$$"),
-            ("\\[\\]", self.insert_math_block_bracket, "公式块 \\[...\\]")
-        ]
-        for text, func, tip in block_btns:
-            btn = self._create_btn(text, lambda c, f=func: f(), tip)
-            row2.addWidget(btn)
-        layout.addLayout(row2)
-        
-        # 常用公式模板
-        row3 = QHBoxLayout()
-        row3.setSpacing(2)
-        template_btns = [
-            ("∑", "\\sum_{i=1}^{n}", "求和"),
-            ("∫", "\\int_{a}^{b}", "积分"),
-            ("√", "\\sqrt{}", "平方根"),
-            ("x²", "^{2}", "上标"),
-            ("x₂", "_{}", "下标")
-        ]
-        for text, template, tip in template_btns:
-            btn = self._create_btn(text, lambda c, t=template: self.insert_latex_template(t), tip)
-            row3.addWidget(btn)
-        layout.addLayout(row3)
-        
-        # 更多公式模板
-        row4 = QHBoxLayout()
-        row4.setSpacing(2)
-        more_btns = [
-            ("÷", "\\frac{}{}", "分数"),
-            ("∞", "\\infty", "无穷大"),
-            ("≠", "\\neq", "不等于"),
-            ("≤", "\\leq", "小于等于"),
-            ("≥", "\\geq", "大于等于")
-        ]
-        for text, template, tip in more_btns:
-            btn = self._create_btn(text, lambda c, t=template: self.insert_latex_template(t), tip)
-            row4.addWidget(btn)
-        layout.addLayout(row4)
-        
-        # 希腊字母
-        row5 = QHBoxLayout()
-        row5.setSpacing(2)
-        greek_btns = [
-            ("α", "\\alpha", "alpha"),
-            ("β", "\\beta", "beta"),
-            ("γ", "\\gamma", "gamma"),
-            ("δ", "\\delta", "delta"),
-            ("π", "\\pi", "pi"),
-            ("σ", "\\sigma", "sigma")
-        ]
-        for text, template, tip in greek_btns:
-            btn = self._create_btn(text, lambda c, t=template: self.insert_latex_template(t), tip)
-            row5.addWidget(btn)
-        layout.addLayout(row5)
-        
-        return page
+    def _create_menu(self):
+        """创建菜单"""
+        from PyQt6.QtWidgets import QMenu
+        menu = QMenu(self)
+        menu.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        return menu
     
     def insert_latex_template(self, template):
         """插入LaTeX模板"""
@@ -897,6 +858,10 @@ class FloatingMarkdownToolbar(QDialog):
         cursor.insertText(template)
         editor.setTextCursor(cursor)
         editor.setFocus()
+    
+    def insert_hr(self):
+        """插入分割线（别名）"""
+        self.insert_separator()
     
     def _create_btn(self, text, callback, tooltip=None):
         """创建按钮，点击后不失去编辑器焦点"""
@@ -2030,7 +1995,7 @@ window.MathJax = {{
         close_btn.setStyleSheet(f"""
             QPushButton {{
                 background-color: {theme['accent']};
-                color: white;
+                color: {theme['accent_text']};
                 border: none;
                 padding: 10px 40px;
                 border-radius: 5px;
@@ -2039,6 +2004,7 @@ window.MathJax = {{
             }}
             QPushButton:hover {{
                 background-color: {theme['accent_hover']};
+                color: {theme['accent_text']};
             }}
         """)
         close_btn.clicked.connect(shortcuts_dialog.accept)
