@@ -15,7 +15,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWebEngineCore import QWebEngineSettings
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QPoint, QSettings, QUrl
-from PyQt6.QtGui import QFont, QColor, QAction, QKeySequence, QTextCursor, QShortcut, QSyntaxHighlighter, QTextCharFormat, QPalette
+from PyQt6.QtGui import QFont, QColor, QAction, QKeySequence, QTextCursor, QShortcut, QSyntaxHighlighter, QTextCharFormat, QPalette, QIcon
 import re
 from datetime import datetime
 
@@ -1624,6 +1624,12 @@ class MarkdownEditor(QMainWindow):
         self.setGeometry(100, 100, 1200, 750)
         self.setMinimumSize(900, 650)
         
+        # 设置窗口图标
+        import os
+        icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'Markdo.png')
+        if os.path.exists(icon_path):
+            self.setWindowIcon(QIcon(icon_path))
+        
         # 创建中心部件
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -2582,6 +2588,12 @@ def main():
     
     # 设置应用样式
     app.setStyle('Fusion')
+    
+    # 设置应用图标
+    import os
+    icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'Markdo.png')
+    if os.path.exists(icon_path):
+        app.setWindowIcon(QIcon(icon_path))
     
     window = MarkdownEditor()
     window.show()
