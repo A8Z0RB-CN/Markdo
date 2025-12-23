@@ -275,7 +275,7 @@ class SettingsDialog(QDialog):
         self.hotkey_input.setPlaceholderText("按下想要设置的快捷键")
         self.hotkey_input.setReadOnly(True)
         self.hotkey_input.setMinimumWidth(150)
-        reset_btn = QPushButton("重置为Alt")
+        reset_btn = QPushButton("重置为Alt+M")
         reset_btn.setMaximumWidth(100)
         reset_btn.clicked.connect(self.reset_hotkey)
         hotkey_layout.addWidget(hotkey_label)
@@ -285,7 +285,7 @@ class SettingsDialog(QDialog):
         toolbar_layout.addLayout(hotkey_layout)
         
         # 提示信息
-        hint_label = QLabel("提示：默认快捷键 Alt，Ctrl+M 也可使用，可自定义")
+        hint_label = QLabel("提示：默认快捷键 Alt+M，Ctrl+M 也可使用，可自定义")
         hint_label.setStyleSheet(f"color: {theme['text_secondary']}; font-size: 11px;")
         toolbar_layout.addWidget(hint_label)
         
@@ -322,13 +322,13 @@ class SettingsDialog(QDialog):
             self.theme_combo.setCurrentIndex(index)
         
         # 加载快捷键设置
-        hotkey = self.settings.value("toolbar/hotkey", "Alt", type=str)
+        hotkey = self.settings.value("toolbar/hotkey", "Alt+M", type=str)
         self.hotkey_input.setText(hotkey)
     
     def reset_hotkey(self):
-        """重置Alt快捷键"""
-        self.hotkey_input.setText("Alt")
-        self.settings.setValue("toolbar/hotkey", "Alt")
+        """重置Alt+M快捷键"""
+        self.hotkey_input.setText("Alt+M")
+        self.settings.setValue("toolbar/hotkey", "Alt+M")
     
     def save_settings(self):
         """保存设置"""
@@ -339,7 +339,7 @@ class SettingsDialog(QDialog):
         self.settings.setValue("theme", theme_name)
         
         # 保存快捷键设置
-        hotkey = self.hotkey_input.text() or "Alt"
+        hotkey = self.hotkey_input.text() or "Alt+M"
         self.settings.setValue("toolbar/hotkey", hotkey)
         
         # 通知父窗口更新设置
@@ -1675,7 +1675,7 @@ class MarkdownEditor(QMainWindow):
         self.auto_show_toolbar = self.settings.value("toolbar/auto_show", False, type=bool)
         self.current_theme_name = self.settings.value("theme", "dark", type=str)
         self.current_theme = Theme.get_theme(self.current_theme_name)
-        self.toolbar_hotkey = self.settings.value("toolbar/hotkey", "Alt", type=str)
+        self.toolbar_hotkey = self.settings.value("toolbar/hotkey", "Alt+M", type=str)
         
         self.init_ui()
         self.apply_theme(self.current_theme_name)
@@ -1794,7 +1794,7 @@ class MarkdownEditor(QMainWindow):
             self.toolbar_shortcut.deleteLater()
             
         # 根据设置添加新快捷键
-        hotkey = self.toolbar_hotkey or "Alt"
+        hotkey = self.toolbar_hotkey or "Alt+M"
         self.toolbar_shortcut = QShortcut(QKeySequence(hotkey), self)
         self.toolbar_shortcut.activated.connect(lambda: self.show_floating_toolbar())
         
@@ -2546,7 +2546,7 @@ window.MathJax = {{
         edit_shortcuts = [
             ("Ctrl+Z", "撤销"),
             ("Ctrl+Y", "重做"),
-            ("Tab", "显示/隐藏Markdown工具栏"),
+            ("Alt+M", "显示/隐藏Markdown工具栏"),
             ("Ctrl+M", "显示/隐藏Markdown工具栏"),
         ]
         content_layout.addWidget(create_shortcut_group("编辑操作", edit_shortcuts))
