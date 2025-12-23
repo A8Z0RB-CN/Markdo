@@ -351,6 +351,175 @@ class SettingsDialog(QDialog):
         self.accept()
 
 
+class WelcomeDialog(QDialog):
+    """开屏教程窗口"""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.parent_editor = parent
+        self.settings = QSettings("Markdo", "Settings")
+        self.init_ui()
+    
+    def get_theme(self):
+        theme_name = self.settings.value("theme", "dark", type=str)
+        return Theme.get_theme(theme_name)
+    
+    def init_ui(self):
+        self.setWindowTitle("👋 欢迎使用 Markdo")
+        self.setFixedSize(520, 580)
+        theme = self.get_theme()
+        
+        self.setStyleSheet(f"""
+            QDialog {{
+                background-color: {theme['bg_secondary']};
+            }}
+            QLabel {{
+                color: {theme['text']};
+            }}
+            QCheckBox {{
+                color: {theme['text_secondary']};
+                spacing: 8px;
+            }}
+            QPushButton {{
+                background-color: {theme['accent']};
+                color: {theme['accent_text']};
+                border: none;
+                padding: 12px 40px;
+                border-radius: 6px;
+                font-weight: bold;
+                font-size: 14px;
+            }}
+            QPushButton:hover {{
+                background-color: {theme['accent_hover']};
+            }}
+        """)
+        
+        layout = QVBoxLayout()
+        layout.setContentsMargins(30, 25, 30, 25)
+        layout.setSpacing(15)
+        
+        # 标题
+        title = QLabel("📝 Markdo - 现代 Markdown 编辑器")
+        title.setStyleSheet(f"font-size: 20px; font-weight: bold; color: {theme['accent']};")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(title)
+        
+        # 副标题
+        subtitle = QLabel("简洁、高效、实时预览")
+        subtitle.setStyleSheet(f"font-size: 13px; color: {theme['text_secondary']};")
+        subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(subtitle)
+        
+        layout.addSpacing(10)
+        
+        # 特色介绍
+        features_group = QGroupBox("✨ 核心特色")
+        features_group.setStyleSheet(f"""
+            QGroupBox {{
+                font-weight: bold;
+                border: 1px solid {theme['border']};
+                border-radius: 8px;
+                margin-top: 12px;
+                padding: 15px;
+                background-color: {theme['bg']};
+            }}
+            QGroupBox::title {{
+                subcontrol-origin: margin;
+                left: 15px;
+                color: {theme['accent']};
+            }}
+        """)
+        features_layout = QVBoxLayout()
+        features_layout.setSpacing(8)
+        
+        features = [
+            "🔄 实时预览 - 边写边看，左右分屏",
+            "🎨 语法高亮 - 清晰展示 Markdown 结构",
+            "✨ 悬浮工具栏 - 快速插入各种格式",
+            "📷 智能插入 - 图片、表格、链接向导",
+            "🌙 主题切换 - 支持黑夜/白天模式",
+            "📑 多标签页 - 同时编辑多个文件",
+        ]
+        for feature in features:
+            label = QLabel(feature)
+            label.setStyleSheet(f"font-size: 13px; padding: 3px 0; color: {theme['text']};")
+            features_layout.addWidget(label)
+        
+        features_group.setLayout(features_layout)
+        layout.addWidget(features_group)
+        
+        # 快捷键介绍
+        shortcuts_group = QGroupBox("⌨️ 常用快捷键")
+        shortcuts_group.setStyleSheet(f"""
+            QGroupBox {{
+                font-weight: bold;
+                border: 1px solid {theme['border']};
+                border-radius: 8px;
+                margin-top: 12px;
+                padding: 15px;
+                background-color: {theme['bg']};
+            }}
+            QGroupBox::title {{
+                subcontrol-origin: margin;
+                left: 15px;
+                color: {theme['accent']};
+            }}
+        """)
+        shortcuts_layout = QGridLayout()
+        shortcuts_layout.setVerticalSpacing(6)
+        shortcuts_layout.setHorizontalSpacing(20)
+        
+        shortcuts = [
+            ("Ctrl+Space", "唤出 Markdown 工具栏"),
+            ("Ctrl+B", "加粗"),
+            ("Ctrl+I", "斜体"),
+            ("Tab", "符号自动补全"),
+            ("Ctrl+S", "保存文件"),
+            ("Ctrl+N", "新建标签页"),
+        ]
+        for i, (key, desc) in enumerate(shortcuts):
+            key_label = QLabel(key)
+            key_label.setStyleSheet(f"font-weight: bold; color: {theme['accent']}; font-size: 12px;")
+            key_label.setMinimumWidth(100)
+            shortcuts_layout.addWidget(key_label, i, 0)
+            
+            desc_label = QLabel(desc)
+            desc_label.setStyleSheet(f"color: {theme['text']}; font-size: 12px;")
+            shortcuts_layout.addWidget(desc_label, i, 1)
+        
+        shortcuts_group.setLayout(shortcuts_layout)
+        layout.addWidget(shortcuts_group)
+        
+        # 提示
+        tip = QLabel("💡 提示：输入 * 后按 Tab 可自动补全为 **，再按可扩展为 ****")
+        tip.setStyleSheet(f"font-size: 12px; color: {theme['text_secondary']}; padding: 5px;")
+        tip.setWordWrap(True)
+        layout.addWidget(tip)
+        
+        layout.addStretch()
+        
+        # 不再显示复选框
+        self.dont_show_checkbox = QCheckBox("下次启动时不再显示")
+        layout.addWidget(self.dont_show_checkbox)
+        
+        # 开始使用按钮
+        btn_layout = QHBoxLayout()
+        btn_layout.addStretch()
+        start_btn = QPushButton("开始使用")
+        start_btn.clicked.connect(self.on_start)
+        btn_layout.addWidget(start_btn)
+        btn_layout.addStretch()
+        layout.addLayout(btn_layout)
+        
+        self.setLayout(layout)
+    
+    def on_start(self):
+        """点击开始使用"""
+        if self.dont_show_checkbox.isChecked():
+            self.settings.setValue("show_welcome", False)
+        self.accept()
+
+
 class MarkdownHighlighter(QSyntaxHighlighter):
     """Markdown语法高亮器 - 柔和配色，简化正则"""
     
@@ -1710,6 +1879,10 @@ class MarkdownEditor(QMainWindow):
         self.apply_theme(self.current_theme_name)
         self.setup_toolbar_shortcut()  # 设置悬浮工具栏快捷键
         
+        # 显示开屏教程（首次启动或未禁用）
+        if self.settings.value("show_welcome", True, type=bool):
+            QTimer.singleShot(100, self.show_welcome)
+        
     def init_ui(self):
         """初始化UI"""
         self.setWindowTitle("📝 Markdo")
@@ -1882,6 +2055,10 @@ class MarkdownEditor(QMainWindow):
         
         # 帮助菜单
         help_menu = menubar.addMenu("帮助")
+        
+        guide_action = QAction("使用指南", self)
+        guide_action.triggered.connect(self.show_welcome)
+        help_menu.addAction(guide_action)
         
         shortcuts_action = QAction("快捷键", self)
         shortcuts_action.triggered.connect(self.show_shortcuts)
@@ -2686,6 +2863,11 @@ window.MathJax = {{
             focused_widget = QApplication.focusWidget()
             if focused_widget is None or not self.floating_toolbar.isAncestorOf(focused_widget):
                 self.floating_toolbar.hide()
+    
+    def show_welcome(self):
+        """显示开屏教程/使用指南"""
+        dialog = WelcomeDialog(self)
+        dialog.exec()
 
 
 def main():
