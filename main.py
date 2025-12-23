@@ -9,7 +9,8 @@ from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QTextEdit, QTabWidget, QToolBar, QPushButton, QFileDialog,
     QMessageBox, QSplitter, QLabel, QStatusBar, QMenuBar, QMenu,
-    QDialog, QGridLayout, QGroupBox, QToolButton, QCheckBox, QComboBox
+    QDialog, QGridLayout, QGroupBox, QToolButton, QCheckBox, QComboBox,
+    QLineEdit, QSpinBox, QRadioButton, QButtonGroup
 )
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWebEngineCore import QWebEngineSettings
@@ -566,6 +567,500 @@ class MarkdownTextEdit(QTextEdit):
         return False  # 未处理，使用默认行为
 
 
+class ImageInsertDialog(QDialog):
+    """图片插入对话框"""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.parent_editor = parent
+        self.setWindowTitle("插入图片")
+        self.setFixedSize(450, 280)
+        self.init_ui()
+    
+    def get_theme(self):
+        """获取当前主题"""
+        if self.parent_editor and hasattr(self.parent_editor, 'current_theme'):
+            return self.parent_editor.current_theme
+        return Theme.DARK
+    
+    def init_ui(self):
+        theme = self.get_theme()
+        self.setStyleSheet(f"""
+            QDialog {{
+                background-color: {theme['bg_secondary']};
+            }}
+            QLabel {{
+                color: {theme['text']};
+                font-size: 13px;
+            }}
+            QLineEdit {{
+                background-color: {theme['bg']};
+                color: {theme['text']};
+                border: 1px solid {theme['border']};
+                padding: 8px;
+                border-radius: 4px;
+                font-size: 13px;
+            }}
+            QLineEdit:focus {{
+                border-color: {theme['accent']};
+            }}
+            QRadioButton {{
+                color: {theme['text']};
+                spacing: 8px;
+            }}
+            QPushButton {{
+                background-color: {theme['accent']};
+                color: {theme['accent_text']};
+                border: none;
+                padding: 8px 20px;
+                border-radius: 4px;
+                font-weight: bold;
+            }}
+            QPushButton:hover {{
+                background-color: {theme['accent_hover']};
+            }}
+            QPushButton#browseBtn {{
+                background-color: {theme['bg_tertiary']};
+                color: {theme['text']};
+                border: 1px solid {theme['border']};
+            }}
+            QPushButton#browseBtn:hover {{
+                background-color: {theme['accent']};
+                color: {theme['accent_text']};
+            }}
+            QPushButton#cancelBtn {{
+                background-color: {theme['bg_tertiary']};
+                color: {theme['text']};
+            }}
+        """)
+        
+        layout = QVBoxLayout()
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(15)
+        
+        # 图片描述
+        desc_layout = QHBoxLayout()
+        desc_label = QLabel("图片描述：")
+        self.desc_input = QLineEdit()
+        self.desc_input.setPlaceholderText("输入图片的替代文本")
+        desc_layout.addWidget(desc_label)
+        desc_layout.addWidget(self.desc_input, 1)
+        layout.addLayout(desc_layout)
+        
+        # 来源选择
+        source_layout = QHBoxLayout()
+        source_label = QLabel("图片来源：")
+        self.source_group = QButtonGroup(self)
+        self.local_radio = QRadioButton("本地文件")
+        self.url_radio = QRadioButton("网络链接")
+        self.url_radio.setChecked(True)
+        self.source_group.addButton(self.local_radio, 0)
+        self.source_group.addButton(self.url_radio, 1)
+        source_layout.addWidget(source_label)
+        source_layout.addWidget(self.local_radio)
+        source_layout.addWidget(self.url_radio)
+        source_layout.addStretch()
+        layout.addLayout(source_layout)
+        
+        # 路径/链接输入
+        path_layout = QHBoxLayout()
+        self.path_label = QLabel("图片链接：")
+        self.path_input = QLineEdit()
+        self.path_input.setPlaceholderText("输入图片URL")
+        self.browse_btn = QPushButton("浏览...")
+        self.browse_btn.setObjectName("browseBtn")
+        self.browse_btn.setVisible(False)
+        self.browse_btn.clicked.connect(self.browse_file)
+        path_layout.addWidget(self.path_label)
+        path_layout.addWidget(self.path_input, 1)
+        path_layout.addWidget(self.browse_btn)
+        layout.addLayout(path_layout)
+        
+        # 切换来源时更新UI
+        self.local_radio.toggled.connect(self.on_source_changed)
+        
+        layout.addStretch()
+        
+        # 按钮区
+        btn_layout = QHBoxLayout()
+        btn_layout.addStretch()
+        cancel_btn = QPushButton("取消")
+        cancel_btn.setObjectName("cancelBtn")
+        cancel_btn.clicked.connect(self.reject)
+        insert_btn = QPushButton("插入")
+        insert_btn.clicked.connect(self.accept)
+        btn_layout.addWidget(cancel_btn)
+        btn_layout.addWidget(insert_btn)
+        layout.addLayout(btn_layout)
+        
+        self.setLayout(layout)
+    
+    def on_source_changed(self, checked):
+        """来源切换"""
+        if self.local_radio.isChecked():
+            self.path_label.setText("文件路径：")
+            self.path_input.setPlaceholderText("选择本地图片文件")
+            self.browse_btn.setVisible(True)
+        else:
+            self.path_label.setText("图片链接：")
+            self.path_input.setPlaceholderText("输入图片URL")
+            self.browse_btn.setVisible(False)
+    
+    def browse_file(self):
+        """浏览本地文件"""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "选择图片", "",
+            "图片文件 (*.png *.jpg *.jpeg *.gif *.bmp *.webp);;所有文件 (*.*)"
+        )
+        if file_path:
+            self.path_input.setText(file_path)
+    
+    def get_result(self):
+        """获取结果"""
+        desc = self.desc_input.text() or "图片描述"
+        path = self.path_input.text() or "图片地址"
+        return f"![{desc}]({path})"
+
+
+class TableInsertDialog(QDialog):
+    """表格插入对话框"""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.parent_editor = parent
+        self.setWindowTitle("插入表格")
+        self.setFixedSize(350, 220)
+        self.init_ui()
+    
+    def get_theme(self):
+        if self.parent_editor and hasattr(self.parent_editor, 'current_theme'):
+            return self.parent_editor.current_theme
+        return Theme.DARK
+    
+    def init_ui(self):
+        theme = self.get_theme()
+        self.setStyleSheet(f"""
+            QDialog {{
+                background-color: {theme['bg_secondary']};
+            }}
+            QLabel {{
+                color: {theme['text']};
+                font-size: 13px;
+            }}
+            QSpinBox {{
+                background-color: {theme['bg']};
+                color: {theme['text']};
+                border: 1px solid {theme['border']};
+                padding: 6px 10px;
+                border-radius: 4px;
+                min-width: 80px;
+            }}
+            QSpinBox:focus {{
+                border-color: {theme['accent']};
+            }}
+            QCheckBox {{
+                color: {theme['text']};
+                spacing: 8px;
+            }}
+            QPushButton {{
+                background-color: {theme['accent']};
+                color: {theme['accent_text']};
+                border: none;
+                padding: 8px 20px;
+                border-radius: 4px;
+                font-weight: bold;
+            }}
+            QPushButton:hover {{
+                background-color: {theme['accent_hover']};
+            }}
+            QPushButton#cancelBtn {{
+                background-color: {theme['bg_tertiary']};
+                color: {theme['text']};
+            }}
+        """)
+        
+        layout = QVBoxLayout()
+        layout.setContentsMargins(25, 25, 25, 20)
+        layout.setSpacing(18)
+        
+        # 行数
+        row_layout = QHBoxLayout()
+        row_label = QLabel("行数：")
+        row_label.setMinimumWidth(60)
+        self.row_spin = QSpinBox()
+        self.row_spin.setRange(1, 20)
+        self.row_spin.setValue(3)
+        row_layout.addWidget(row_label)
+        row_layout.addWidget(self.row_spin)
+        row_layout.addStretch()
+        layout.addLayout(row_layout)
+        
+        # 列数
+        col_layout = QHBoxLayout()
+        col_label = QLabel("列数：")
+        col_label.setMinimumWidth(60)
+        self.col_spin = QSpinBox()
+        self.col_spin.setRange(1, 10)
+        self.col_spin.setValue(3)
+        col_layout.addWidget(col_label)
+        col_layout.addWidget(self.col_spin)
+        col_layout.addStretch()
+        layout.addLayout(col_layout)
+        
+        # 包含表头
+        self.header_check = QCheckBox("包含表头行")
+        self.header_check.setChecked(True)
+        layout.addWidget(self.header_check)
+        
+        layout.addStretch()
+        
+        # 按钮区
+        btn_layout = QHBoxLayout()
+        btn_layout.addStretch()
+        cancel_btn = QPushButton("取消")
+        cancel_btn.setObjectName("cancelBtn")
+        cancel_btn.clicked.connect(self.reject)
+        insert_btn = QPushButton("插入")
+        insert_btn.clicked.connect(self.accept)
+        btn_layout.addWidget(cancel_btn)
+        btn_layout.addWidget(insert_btn)
+        layout.addLayout(btn_layout)
+        
+        self.setLayout(layout)
+    
+    def get_result(self):
+        """生成表格Markdown"""
+        rows = self.row_spin.value()
+        cols = self.col_spin.value()
+        has_header = self.header_check.isChecked()
+        
+        lines = ["\n"]
+        
+        if has_header:
+            # 表头行
+            header = "| " + " | ".join([f"列{i+1}" for i in range(cols)]) + " |"
+            lines.append(header)
+            # 分隔行
+            separator = "| " + " | ".join(["---" for _ in range(cols)]) + " |"
+            lines.append(separator)
+            # 数据行（减1因为表头占一行）
+            for r in range(rows - 1):
+                row = "| " + " | ".join([f"内容" for _ in range(cols)]) + " |"
+                lines.append(row)
+        else:
+            # 无表头，直接数据行
+            for r in range(rows):
+                row = "| " + " | ".join([f"内容" for _ in range(cols)]) + " |"
+                lines.append(row)
+        
+        lines.append("\n")
+        return "\n".join(lines)
+
+
+class LinkInsertDialog(QDialog):
+    """链接插入对话框"""
+    
+    def __init__(self, parent=None, selected_text=""):
+        super().__init__(parent)
+        self.parent_editor = parent
+        self.selected_text = selected_text
+        self.setWindowTitle("插入链接")
+        self.setFixedSize(420, 200)
+        self.init_ui()
+    
+    def get_theme(self):
+        if self.parent_editor and hasattr(self.parent_editor, 'current_theme'):
+            return self.parent_editor.current_theme
+        return Theme.DARK
+    
+    def init_ui(self):
+        theme = self.get_theme()
+        self.setStyleSheet(f"""
+            QDialog {{
+                background-color: {theme['bg_secondary']};
+            }}
+            QLabel {{
+                color: {theme['text']};
+                font-size: 13px;
+            }}
+            QLineEdit {{
+                background-color: {theme['bg']};
+                color: {theme['text']};
+                border: 1px solid {theme['border']};
+                padding: 8px;
+                border-radius: 4px;
+            }}
+            QLineEdit:focus {{
+                border-color: {theme['accent']};
+            }}
+            QPushButton {{
+                background-color: {theme['accent']};
+                color: {theme['accent_text']};
+                border: none;
+                padding: 8px 20px;
+                border-radius: 4px;
+                font-weight: bold;
+            }}
+            QPushButton:hover {{
+                background-color: {theme['accent_hover']};
+            }}
+            QPushButton#cancelBtn {{
+                background-color: {theme['bg_tertiary']};
+                color: {theme['text']};
+            }}
+        """)
+        
+        layout = QVBoxLayout()
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(15)
+        
+        # 链接文本
+        text_layout = QHBoxLayout()
+        text_label = QLabel("链接文本：")
+        text_label.setMinimumWidth(70)
+        self.text_input = QLineEdit()
+        self.text_input.setText(self.selected_text)
+        self.text_input.setPlaceholderText("显示的文本")
+        text_layout.addWidget(text_label)
+        text_layout.addWidget(self.text_input, 1)
+        layout.addLayout(text_layout)
+        
+        # 链接URL
+        url_layout = QHBoxLayout()
+        url_label = QLabel("链接地址：")
+        url_label.setMinimumWidth(70)
+        self.url_input = QLineEdit()
+        self.url_input.setPlaceholderText("https://example.com")
+        url_layout.addWidget(url_label)
+        url_layout.addWidget(self.url_input, 1)
+        layout.addLayout(url_layout)
+        
+        layout.addStretch()
+        
+        # 按钮区
+        btn_layout = QHBoxLayout()
+        btn_layout.addStretch()
+        cancel_btn = QPushButton("取消")
+        cancel_btn.setObjectName("cancelBtn")
+        cancel_btn.clicked.connect(self.reject)
+        insert_btn = QPushButton("插入")
+        insert_btn.clicked.connect(self.accept)
+        btn_layout.addWidget(cancel_btn)
+        btn_layout.addWidget(insert_btn)
+        layout.addLayout(btn_layout)
+        
+        self.setLayout(layout)
+    
+    def get_result(self):
+        text = self.text_input.text() or "链接文本"
+        url = self.url_input.text() or "链接地址"
+        return f"[{text}]({url})"
+
+
+class CodeBlockInsertDialog(QDialog):
+    """代码块插入对话框"""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.parent_editor = parent
+        self.setWindowTitle("插入代码块")
+        self.setFixedSize(350, 180)
+        self.init_ui()
+    
+    def get_theme(self):
+        if self.parent_editor and hasattr(self.parent_editor, 'current_theme'):
+            return self.parent_editor.current_theme
+        return Theme.DARK
+    
+    def init_ui(self):
+        theme = self.get_theme()
+        self.setStyleSheet(f"""
+            QDialog {{
+                background-color: {theme['bg_secondary']};
+            }}
+            QLabel {{
+                color: {theme['text']};
+                font-size: 13px;
+            }}
+            QComboBox {{
+                background-color: {theme['bg']};
+                color: {theme['text']};
+                border: 1px solid {theme['border']};
+                padding: 8px;
+                border-radius: 4px;
+                min-width: 180px;
+            }}
+            QComboBox:focus {{
+                border-color: {theme['accent']};
+            }}
+            QComboBox::drop-down {{
+                border: none;
+            }}
+            QComboBox QAbstractItemView {{
+                background-color: {theme['bg']};
+                color: {theme['text']};
+                selection-background-color: {theme['accent']};
+                selection-color: {theme['accent_text']};
+            }}
+            QPushButton {{
+                background-color: {theme['accent']};
+                color: {theme['accent_text']};
+                border: none;
+                padding: 8px 20px;
+                border-radius: 4px;
+                font-weight: bold;
+            }}
+            QPushButton:hover {{
+                background-color: {theme['accent_hover']};
+            }}
+            QPushButton#cancelBtn {{
+                background-color: {theme['bg_tertiary']};
+                color: {theme['text']};
+            }}
+        """)
+        
+        layout = QVBoxLayout()
+        layout.setContentsMargins(25, 25, 25, 20)
+        layout.setSpacing(18)
+        
+        # 语言选择
+        lang_layout = QHBoxLayout()
+        lang_label = QLabel("编程语言：")
+        self.lang_combo = QComboBox()
+        languages = [
+            "（无）", "python", "javascript", "typescript", "java", "c", "cpp", "csharp",
+            "go", "rust", "html", "css", "sql", "bash", "powershell",
+            "json", "xml", "yaml", "markdown", "plaintext"
+        ]
+        self.lang_combo.addItems(languages)
+        lang_layout.addWidget(lang_label)
+        lang_layout.addWidget(self.lang_combo)
+        lang_layout.addStretch()
+        layout.addLayout(lang_layout)
+        
+        layout.addStretch()
+        
+        # 按钮区
+        btn_layout = QHBoxLayout()
+        btn_layout.addStretch()
+        cancel_btn = QPushButton("取消")
+        cancel_btn.setObjectName("cancelBtn")
+        cancel_btn.clicked.connect(self.reject)
+        insert_btn = QPushButton("插入")
+        insert_btn.clicked.connect(self.accept)
+        btn_layout.addWidget(cancel_btn)
+        btn_layout.addWidget(insert_btn)
+        layout.addLayout(btn_layout)
+        
+        self.setLayout(layout)
+    
+    def get_result(self):
+        lang = self.lang_combo.currentText()
+        if lang == "（无）":
+            lang = ""
+        return f"```{lang}\n\n```\n"
+
+
 class FloatingMarkdownToolbar(QDialog):
     """悬浮Markdown工具栏 - 折叠菜单样式 + 鼠标控制"""
     
@@ -976,50 +1471,64 @@ class FloatingMarkdownToolbar(QDialog):
         editor.setFocus()
     
     def insert_link(self):
-        """插入链接"""
+        """插入链接 - 使用对话框"""
         editor = self.get_editor()
         if not editor:
             return
         
+        # 获取选中文本作为默认链接文本
         cursor = editor.textCursor()
-        if cursor.hasSelection():
-            selected = cursor.selectedText()
-            cursor.insertText(f"[{selected}](链接地址)")
-        else:
-            cursor.insertText("[链接文本](链接地址)")
+        selected_text = cursor.selectedText() if cursor.hasSelection() else ""
+        
+        dialog = LinkInsertDialog(self.parent_editor, selected_text)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            result = dialog.get_result()
+            cursor.insertText(result)
+            editor.setTextCursor(cursor)
         editor.setFocus()
     
     def insert_image(self):
-        """插入图片"""
+        """插入图片 - 使用对话框"""
         editor = self.get_editor()
         if not editor:
             return
         
-        cursor = editor.textCursor()
-        cursor.insertText("![图片描述](图片地址)")
+        dialog = ImageInsertDialog(self.parent_editor)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            result = dialog.get_result()
+            cursor = editor.textCursor()
+            cursor.insertText(result)
+            editor.setTextCursor(cursor)
         editor.setFocus()
     
     def insert_table(self):
-        """插入表格"""
+        """插入表格 - 使用对话框"""
         editor = self.get_editor()
         if not editor:
             return
         
-        cursor = editor.textCursor()
-        table = "\n| 列1 | 列2 | 列3 |\n| --- | --- | --- |\n| 内容1 | 内容2 | 内容3 |\n"
-        cursor.insertText(table)
+        dialog = TableInsertDialog(self.parent_editor)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            result = dialog.get_result()
+            cursor = editor.textCursor()
+            cursor.insertText(result)
+            editor.setTextCursor(cursor)
         editor.setFocus()
     
     def insert_code_block(self):
-        """插入代码块"""
+        """插入代码块 - 使用对话框"""
         editor = self.get_editor()
         if not editor:
             return
         
-        cursor = editor.textCursor()
-        cursor.insertText("```\n\n```\n")
-        cursor.movePosition(QTextCursor.MoveOperation.Up, QTextCursor.MoveMode.MoveAnchor, 2)
-        editor.setTextCursor(cursor)
+        dialog = CodeBlockInsertDialog(self.parent_editor)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            result = dialog.get_result()
+            cursor = editor.textCursor()
+            cursor.insertText(result)
+            # 将光标移动到代码块内部
+            cursor.movePosition(QTextCursor.MoveOperation.Up, QTextCursor.MoveMode.MoveAnchor, 2)
+            editor.setTextCursor(cursor)
         editor.setFocus()
     
     def insert_timestamp(self):
