@@ -5,6 +5,7 @@ A modern, lightweight Markdown editor built with PyQt6, featuring real-time prev
 [download releases for Windows]
 https://github.com/A8Z0RB-CN/Markdo/releases
 
+project QQ group:329474729
 ## ✨ Features
 
 - **Real-time Preview**: Instant Markdown rendering with split-pane view
@@ -124,6 +125,7 @@ This project is open source and available under the MIT License.
 ## 📮 Contact
 
 For issues and feature requests, please use the [GitHub Issues](https://github.com/A8Z0RB-CN/Markdo/issues) page.
+
 
 
 
