@@ -2,7 +2,7 @@
 
 A modern, lightweight Markdown editor built with PyQt6, featuring real-time preview and floating toolbar for seamless editing experience.
 
-download releases for Windows
+［download releases for Windows］（https://github.com/A8Z0RB-CN/Markdo/releases）
 
 ## ✨ Features
 
@@ -123,4 +123,5 @@ This project is open source and available under the MIT License.
 ## 📮 Contact
 
 For issues and feature requests, please use the [GitHub Issues](https://github.com/A8Z0RB-CN/Markdo/issues) page.
+
 
