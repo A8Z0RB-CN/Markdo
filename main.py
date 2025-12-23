@@ -1885,7 +1885,7 @@ class MarkdownEditor(QMainWindow):
         
     def init_ui(self):
         """初始化UI"""
-        self.setWindowTitle("📝 Markdo")
+        self.setWindowTitle("Markdo")
         self.setGeometry(100, 100, 1200, 750)
         self.setMinimumSize(900, 650)
         
