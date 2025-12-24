@@ -272,10 +272,12 @@ class SettingsDialog(QDialog):
         hotkey_layout = QHBoxLayout()
         hotkey_label = QLabel("显示/隐藏快捷键：")
         self.hotkey_input = QLineEdit()
-        self.hotkey_input.setPlaceholderText("按下想要设置的快捷键")
+        self.hotkey_input.setPlaceholderText("点击此处并按下想要设置的快捷键")
         self.hotkey_input.setReadOnly(True)
         self.hotkey_input.setMinimumWidth(150)
-        reset_btn = QPushButton("重置为Ctrl+Space")
+        self.hotkey_input.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.hotkey_input.mousePressEvent = self.on_hotkey_input_click
+        reset_btn = QPushButton("重置为Ctrl")
         reset_btn.setMaximumWidth(120)
         reset_btn.clicked.connect(self.reset_hotkey)
         hotkey_layout.addWidget(hotkey_label)
@@ -285,7 +287,7 @@ class SettingsDialog(QDialog):
         toolbar_layout.addLayout(hotkey_layout)
         
         # 提示信息
-        hint_label = QLabel("提示：默认快捷键 Ctrl+Space，Ctrl+M 也可使用")
+        hint_label = QLabel("提示：默认快捷键 Ctrl+`，Ctrl+M 也可使用")
         hint_label.setStyleSheet(f"color: {theme['text_secondary']}; font-size: 11px;")
         toolbar_layout.addWidget(hint_label)
         
@@ -322,13 +324,88 @@ class SettingsDialog(QDialog):
             self.theme_combo.setCurrentIndex(index)
         
         # 加载快捷键设置
-        hotkey = self.settings.value("toolbar/hotkey", "Ctrl+Space", type=str)
+        hotkey = self.settings.value("toolbar/hotkey", "Ctrl", type=str)
         self.hotkey_input.setText(hotkey)
     
+    def on_hotkey_input_click(self, event):
+        """点击快捷键输入框时开始捕获键盘"""
+        self.hotkey_input.clear()
+        self.hotkey_input.setPlaceholderText("请按下快捷键...")
+        self.hotkey_input.setFocus()
+    
+    def keyPressEvent(self, event):
+        """捕获键盘事件用于自定义快捷键"""
+        if self.hotkey_input.hasFocus():
+            # 检查是否是有效的快捷键组合
+            modifiers = []
+            
+            if event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+                modifiers.append("Ctrl")
+            if event.modifiers() & Qt.KeyboardModifier.AltModifier:
+                modifiers.append("Alt")
+            if event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
+                modifiers.append("Shift")
+            if event.modifiers() & Qt.KeyboardModifier.MetaModifier:
+                modifiers.append("Meta")
+            
+            # 获取按键
+            key = event.key()
+            key_name = ""
+            
+            # 常用按键映射
+            key_map = {
+                Qt.Key.Key_Space: "Space",
+                Qt.Key.Key_Tab: "Tab",
+                Qt.Key.Key_Enter: "Enter",
+                Qt.Key.Key_Return: "Return",
+                Qt.Key.Key_Escape: "Esc",
+                Qt.Key.Key_Backspace: "Backspace",
+                Qt.Key.Key_Delete: "Delete",
+                Qt.Key.Key_Insert: "Insert",
+                Qt.Key.Key_Home: "Home",
+                Qt.Key.Key_End: "End",
+                Qt.Key.Key_PageUp: "PageUp",
+                Qt.Key.Key_PageDown: "PageDown",
+                Qt.Key.Key_Up: "Up",
+                Qt.Key.Key_Down: "Down",
+                Qt.Key.Key_Left: "Left",
+                Qt.Key.Key_Right: "Right",
+                Qt.Key.Key_F1: "F1", Qt.Key.Key_F2: "F2", Qt.Key.Key_F3: "F3",
+                Qt.Key.Key_F4: "F4", Qt.Key.Key_F5: "F5", Qt.Key.Key_F6: "F6",
+                Qt.Key.Key_F7: "F7", Qt.Key.Key_F8: "F8", Qt.Key.Key_F9: "F9",
+                Qt.Key.Key_F10: "F10", Qt.Key.Key_F11: "F11", Qt.Key.Key_F12: "F12",
+                Qt.Key.Key_QuoteLeft: "`",
+            }
+            
+            if key in key_map:
+                key_name = key_map[key]
+            elif 0x20 <= key <= 0x7e:  # 可打印ASCII字符
+                key_name = chr(key)
+            elif 0x41 <= key <= 0x5a:  # A-Z
+                key_name = chr(key)
+            elif 0x30 <= key <= 0x39:  # 0-9
+                key_name = chr(key)
+            
+            # 如果只有修饰键，只显示修饰键
+            if not key_name and modifiers:
+                hotkey = "+".join(modifiers)
+            elif key_name:
+                hotkey = "+".join(modifiers + [key_name]) if modifiers else key_name
+            else:
+                event.ignore()
+                return
+            
+            # 设置快捷键
+            self.hotkey_input.setText(hotkey)
+            self.hotkey_input.setPlaceholderText("点击此处并按下想要设置的快捷键")
+            event.accept()
+        else:
+            super().keyPressEvent(event)
+    
     def reset_hotkey(self):
-        """重置Ctrl+Space快捷键"""
-        self.hotkey_input.setText("Ctrl+Space")
-        self.settings.setValue("toolbar/hotkey", "Ctrl+Space")
+        """重置快捷键为默认值"""
+        self.hotkey_input.setText("Ctrl+`")
+        self.settings.setValue("toolbar/hotkey", "Ctrl+`")
     
     def save_settings(self):
         """保存设置"""
@@ -338,8 +415,10 @@ class SettingsDialog(QDialog):
         theme_name = self.theme_combo.currentData()
         self.settings.setValue("theme", theme_name)
         
-        # 保存快捷键设置
-        hotkey = self.hotkey_input.text() or "Ctrl+Space"
+        # 保存快捷键设置（验证快捷键有效性）
+        hotkey = self.hotkey_input.text().strip()
+        if not hotkey:
+            hotkey = "Ctrl+`"  # 默认快捷键
         self.settings.setValue("toolbar/hotkey", hotkey)
         
         # 通知父窗口更新设置
@@ -1873,7 +1952,7 @@ class MarkdownEditor(QMainWindow):
         self.auto_show_toolbar = self.settings.value("toolbar/auto_show", False, type=bool)
         self.current_theme_name = self.settings.value("theme", "dark", type=str)
         self.current_theme = Theme.get_theme(self.current_theme_name)
-        self.toolbar_hotkey = self.settings.value("toolbar/hotkey", "Ctrl+Space", type=str)
+        self.toolbar_hotkey = self.settings.value("toolbar/hotkey", "Ctrl+`", type=str)
         
         self.init_ui()
         self.apply_theme(self.current_theme_name)
@@ -1989,9 +2068,18 @@ class MarkdownEditor(QMainWindow):
         if self.toolbar_shortcut:
             self.toolbar_shortcut.deleteLater()
             
-        # 根据设置添加新快捷键
-        hotkey = self.toolbar_hotkey or "Ctrl+Space"
+        # 根据设置添加新快捷键（默认为Ctrl+`）
+        hotkey = self.toolbar_hotkey or "Ctrl+`"
+        
+        # 处理单独的 "Ctrl" 情况，改为 "Ctrl+`"
+        if hotkey == "Ctrl":
+            hotkey = "Ctrl+`"
+        
         self.toolbar_shortcut = QShortcut(QKeySequence(hotkey), self)
+        # 提高优先级，确保快捷键优先响应
+        self.toolbar_shortcut.setAutoRepeat(False)
+        # 使用 WindowShortcut 使快捷键在整个窗口上有效
+        self.toolbar_shortcut.setContext(Qt.ShortcutContext.WindowShortcut)
         self.toolbar_shortcut.activated.connect(lambda: self.show_floating_toolbar())
         
     def reload_toolbar_shortcut(self, hotkey):
