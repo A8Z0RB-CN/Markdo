@@ -277,7 +277,7 @@ class SettingsDialog(QDialog):
         self.hotkey_input.setMinimumWidth(150)
         self.hotkey_input.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.hotkey_input.mousePressEvent = self.on_hotkey_input_click
-        reset_btn = QPushButton("重置为Ctrl")
+        reset_btn = QPushButton("重置为Ctrl+;")
         reset_btn.setMaximumWidth(120)
         reset_btn.clicked.connect(self.reset_hotkey)
         hotkey_layout.addWidget(hotkey_label)
@@ -287,7 +287,7 @@ class SettingsDialog(QDialog):
         toolbar_layout.addLayout(hotkey_layout)
         
         # 提示信息
-        hint_label = QLabel("提示：默认快捷键 Ctrl+`，Ctrl+M 也可使用")
+        hint_label = QLabel("提示：默认快捷键 Ctrl+;，Ctrl+M 也可使用")
         hint_label.setStyleSheet(f"color: {theme['text_secondary']}; font-size: 11px;")
         toolbar_layout.addWidget(hint_label)
         
@@ -404,8 +404,8 @@ class SettingsDialog(QDialog):
     
     def reset_hotkey(self):
         """重置快捷键为默认值"""
-        self.hotkey_input.setText("Ctrl+`")
-        self.settings.setValue("toolbar/hotkey", "Ctrl+`")
+        self.hotkey_input.setText("Ctrl+;")
+        self.settings.setValue("toolbar/hotkey", "Ctrl+;")
     
     def save_settings(self):
         """保存设置"""
@@ -415,10 +415,10 @@ class SettingsDialog(QDialog):
         theme_name = self.theme_combo.currentData()
         self.settings.setValue("theme", theme_name)
         
-        # 保存快捷键设置（验证快捷键有效性）
+        # 保存快捷键设置（验证快捷键有效性 ）
         hotkey = self.hotkey_input.text().strip()
         if not hotkey:
-            hotkey = "Ctrl+`"  # 默认快捷键
+            hotkey = "Ctrl+;"  # 默认快捷键
         self.settings.setValue("toolbar/hotkey", hotkey)
         
         # 通知父窗口更新设置
@@ -549,7 +549,7 @@ class WelcomeDialog(QDialog):
         shortcuts_layout.setHorizontalSpacing(20)
         
         shortcuts = [
-            ("Ctrl+Space", "唤出 Markdown 工具栏"),
+            ("Ctrl+;", "唤出 Markdown 工具栏"),
             ("Ctrl+B", "加粗"),
             ("Ctrl+I", "斜体"),
             ("Tab", "符号自动补全"),
@@ -1952,7 +1952,7 @@ class MarkdownEditor(QMainWindow):
         self.auto_show_toolbar = self.settings.value("toolbar/auto_show", False, type=bool)
         self.current_theme_name = self.settings.value("theme", "dark", type=str)
         self.current_theme = Theme.get_theme(self.current_theme_name)
-        self.toolbar_hotkey = self.settings.value("toolbar/hotkey", "Ctrl+`", type=str)
+        self.toolbar_hotkey = self.settings.value("toolbar/hotkey", "Ctrl+;", type=str)
         
         self.init_ui()
         self.apply_theme(self.current_theme_name)
@@ -2068,12 +2068,12 @@ class MarkdownEditor(QMainWindow):
         if self.toolbar_shortcut:
             self.toolbar_shortcut.deleteLater()
             
-        # 根据设置添加新快捷键（默认为Ctrl+`）
-        hotkey = self.toolbar_hotkey or "Ctrl+`"
+        # 根据设置添加新快捷键（默认为Ctrl+;）
+        hotkey = self.toolbar_hotkey or "Ctrl+;"
         
-        # 处理单独的 "Ctrl" 情况，改为 "Ctrl+`"
+        # 处理单独的 "Ctrl" 情况，改为 "Ctrl+;"
         if hotkey == "Ctrl":
-            hotkey = "Ctrl+`"
+            hotkey = "Ctrl+;"
         
         self.toolbar_shortcut = QShortcut(QKeySequence(hotkey), self)
         # 提高优先级，确保快捷键优先响应
@@ -2863,7 +2863,7 @@ window.MathJax = {{
         edit_shortcuts = [
             ("Ctrl+Z", "撤销"),
             ("Ctrl+Y", "重做"),
-            ("Ctrl+Space", "显示/隐藏Markdown工具栏"),
+            ("Ctrl+;", "显示/隐藏Markdown工具栏"),
             ("Ctrl+M", "显示/隐藏Markdown工具栏"),
         ]
         content_layout.addWidget(create_shortcut_group("编辑操作", edit_shortcuts))
