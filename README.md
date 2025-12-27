@@ -22,7 +22,7 @@ project QQ group:329474729
 
 ### Prerequisites
 
-- Python 3.8+
+- Python 3.11+
 - Windows 10/11
 
 ### Installation
@@ -162,6 +162,7 @@ This project is open source and available under the MIT License.
 ## 📮 Contact
 
 For issues and feature requests, please use the [GitHub Issues](https://github.com/A8Z0RB-CN/Markdo/issues) page.
+
 
 
 
