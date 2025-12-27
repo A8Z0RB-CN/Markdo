@@ -46,3 +46,19 @@ installer_nuitka/
 # OS
 .DS_Store
 Thumbs.db
+
+# Non-core files
+*.iss
+*.bat
+
+# Documentation (except README.md)
+CHANGELOG.md
+FILE_ASSOCIATION_README.md
+FINAL_TEST_REPORT.md
+NUITKA_BUILD_README.md
+PACKAGING_GUIDE.md
+SHORTCUTS_STATUS.md
+打包指南.md
+
+# Qoder files
+.qoder/
