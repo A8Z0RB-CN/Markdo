@@ -38,6 +38,7 @@ ENV/
 # cx_Freeze
 build/
 installer_cx/
+installer_nuitka/
 
 # Logs
 *.log

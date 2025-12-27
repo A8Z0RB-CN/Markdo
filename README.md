@@ -2,6 +2,9 @@
 
 A modern, lightweight Markdown editor built with PyQt6, featuring real-time preview and floating toolbar for seamless editing experience.
 
+**Version**: 1.0.3  
+**Latest Update**: Enhanced keyboard shortcuts support
+
 [download releases for Windows]
 https://github.com/A8Z0RB-CN/Markdo/releases
 
@@ -89,10 +92,44 @@ def hello():
 
 ## ⌨️ Keyboard Shortcuts
 
-- `Ctrl+Space`: Toggle floating toolbar
-- `Ctrl+S`: Save file
-- `Ctrl+O`: Open file
+> ✅ **v1.0.3 Update**: All shortcuts now work consistently both inside and outside the editor window!
+
+### 文件操作
 - `Ctrl+N`: New file
+- `Ctrl+O`: Open file
+- `Ctrl+S`: Save file
+- `Ctrl+Shift+S`: Save as file
+
+### 编辑操作
+- `Ctrl+Z`: Undo
+- `Ctrl+Y`: Redo (also `Ctrl+Shift+Z`)
+- `Ctrl+A`: Select all
+- `Ctrl+F`: Find
+- `Ctrl+Shift+C`: Copy all content
+
+### 文本格式
+- `Ctrl+B`: Bold
+- `Ctrl+I`: Italic
+- `Ctrl+D`: Strikethrough
+- `Ctrl+H`: Highlight
+- `Ctrl+``: Inline code
+- `Ctrl+1~6`: Heading 1~6
+
+### 插入内容
+- `Ctrl+K`: Insert link
+- `Ctrl+Shift+K`: Insert code block
+- `Ctrl+Q`: Insert quote
+- `Ctrl+L`: Insert unordered list
+- `Ctrl+Shift+L`: Insert ordered list
+- `Ctrl+R`: Insert horizontal rule
+- `Ctrl+T`: Insert timestamp
+
+### 工具bar
+- `Ctrl+M`: Toggle floating toolbar
+- `Ctrl+;`: Toggle floating toolbar (alternative)
+
+### 帮助
+- `F1`: Show shortcuts help
 
 ## 📂 Project Structure
 
