@@ -19,46 +19,74 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+MANIFEST
+.pytest_cache/
+.coverage
+.nox/
+.pdm-build/
 
 # Virtual Environment
 .venv/
 venv/
-ENV/
+env/
 
 # IDE
-.idea/
 .vscode/
+.idea/
 *.swp
 *.swo
-
-# PyInstaller
-*.manifest
-*.spec
-
-# cx_Freeze
-build/
-installer_cx/
-installer_nuitka/
-
-# Logs
-*.log
+*~
 
 # OS
 .DS_Store
 Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+System Volume Information/
 
-# Non-core files
-*.iss
+# Logs
+*.log
+markdo_crash.log
+markdo_error.txt
+
+# Build artifacts
+Nuitka-crash-report.xml
+build_nuitka/
+dist/
+installer_nuitka/
+
+# Batch files (except specific ones if needed)
 *.bat
+*.ps1
 
-# Documentation (except README.md)
+# Other temp files
+*.tmp
+*.temp
+.nuitka/
+
+# Documentation and test files (except README.md)
 CHANGELOG.md
-FILE_ASSOCIATION_README.md
 FINAL_TEST_REPORT.md
-NUITKA_BUILD_README.md
 PACKAGING_GUIDE.md
+NUITKA_使用说明.md
+NUITKA_BUILD_README.md
+FILE_ASSOCIATION_README.md
 SHORTCUTS_STATUS.md
 打包指南.md
+structue_intro.txt
 
-# Qoder files
-.qoder/
+# Configuration and setup files (except if they are essential)
+Pipfile
+Pipfile.lock
+setup_cx.py
+setup_cx_full.py
+
+# Test files
+test_*.py
+test_*.bat
+test_*.html
+
+# Other non-essential files
+check_build.ps1
+nuitka-crash-report.xml
+setup_nuitka.iss
