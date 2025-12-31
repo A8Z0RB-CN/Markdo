@@ -37,7 +37,7 @@
 
 ### 环境要求
 
-- Python 3.8 或更高版本
+- Python 3.11+
 - Windows 10/11
 
 ### 安装步骤
@@ -113,7 +113,7 @@ build_all.bat
 - 块级公式: `$$\int_0^\infty e^{-x}dx = 1$$`
 
 ### 代码块
-````markdown
+`````
 ```python
 def hello():
     print("Hello, Markdo!")
